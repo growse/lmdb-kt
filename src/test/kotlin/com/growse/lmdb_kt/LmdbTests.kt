@@ -30,6 +30,25 @@ class LmdbTests {
     }
 
     @Test
+    fun `given an empty lmdb database, when trying to stat, then the correct environment stats are returned`() {
+        Environment(
+            Paths.get(
+                javaClass.getResource("/databases/little-endian/16KB-page-size/empty")!!.toURI()
+            )
+        ).use { env ->
+            env.stat.run {
+                assertEquals(16384u, pageSize, "Page size is 16KB")
+                assertEquals(0u, treeDepth, "Depth of 1")
+                assertEquals(0, branchPagesCount, "0 branch pages")
+                assertEquals(0, leafPagesCount, "1 leaf page")
+                assertEquals(0, overflowPagesCount, "0 overflow pages")
+                assertEquals(0, entriesCount, "1 entry")
+            }
+        }
+    }
+
+
+    @Test
     fun `given a path that is not a dir, when trying to create an lmdb database, then an assertion error is thrown`() {
         assertThrows<AssertionError> {
             Environment(Paths.get("boop"))

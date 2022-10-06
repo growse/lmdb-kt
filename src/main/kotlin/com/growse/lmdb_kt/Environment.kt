@@ -46,10 +46,11 @@ class Environment(lmdbPath: Path) : AutoCloseable {
 //        assert(lockFile.fileSize() % pageSize.toInt() == 0L) { "Lock file is not a valid size" }
 
         val rootPageNumber = metadata.mainDb.rootPageNumber
-        assert(rootPageNumber > 0)
-        assert(rootPageNumber <= UInt.MAX_VALUE.toLong())
-        logger.trace { "Fetching root page" }
-        val rootPage = getPage(rootPageNumber.toUInt())
+        if (rootPageNumber >= 0) { // -1 is an empty db
+            assert(rootPageNumber <= UInt.MAX_VALUE.toLong())
+            logger.trace { "Fetching root page" }
+            val rootPage = getPage(rootPageNumber.toUInt())
+        }
 
     }
 
