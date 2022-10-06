@@ -87,7 +87,7 @@ class Environment(lmdbPath: Path) : AutoCloseable {
                 val selectedPage =
                     if ((first as MetaDataPage64).txnId > (second as MetaDataPage64).txnId) first else second
                 assert(selectedPage.magic == 0xBEEFC0DE.toUInt()) { "Page does not contain required magic. Instead ${selectedPage.magic}" }
-                assert(selectedPage.version == 1u || selectedPage.version == 999u) { "Invalid page version ${selectedPage.version}" }
+                assert(selectedPage.version == 1u) { "Invalid page version ${selectedPage.version}" } // Not supporting development version 999
                 logger.trace { "Page size is $testPageSize" }
                 return Pair(selectedPage, testPageSize)
             } catch (e: Throwable) {
@@ -135,6 +135,7 @@ class Environment(lmdbPath: Path) : AutoCloseable {
         val kSize: UShort
         val key: ByteArray
         val value: ByteArray
+        val overflowPage: Long
 
         init {
             logger.trace { "Parsing leaf node at ${buffer.position()}" }
@@ -152,14 +153,15 @@ class Environment(lmdbPath: Path) : AutoCloseable {
             val valueSize = lo + (hi.toUInt().shl(16))
 
             //TODO BigData
-            value = if (flags.get(NODE_BIGDATA)) {
-                buffer.long.also { logger.trace { "Value is bigdata at address $it" } }
-                ByteArray(0)
+            if (flags.get(NODE_BIGDATA)) {
+                overflowPage = buffer.long.also { logger.trace { "Value is bigdata at page $it" } }
+                value = ByteArray(0)
             } else {
                 logger.trace { "Value is $valueSize bytes at ${buffer.position()}" }
-                ByteArray(valueSize.toInt()).apply(buffer::get)
+                value = ByteArray(valueSize.toInt()).apply(buffer::get)
+                logger.trace { "Value is ${value.toHex()} or ${value.toAscii()}" }
+                overflowPage = 0
             }
-            logger.trace { "Value is ${value.toHex()} or ${value.toAscii()}" }
         }
     }
 
