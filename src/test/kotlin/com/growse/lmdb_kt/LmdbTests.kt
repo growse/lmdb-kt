@@ -12,7 +12,7 @@ class LmdbTests {
     }
 
     @Test
-    fun `given a small lmdb database, when trying to stat, then the correct environment stats are returned`() {
+    fun `given a small, single-value lmdb database, when trying to stat, then the correct environment stats are returned`() {
         Environment(
             Paths.get(
                 javaClass.getResource("/databases/little-endian/16KB-page-size/single-entry")!!.toURI()
@@ -25,6 +25,23 @@ class LmdbTests {
                 assertEquals(1, leafPagesCount, "1 leaf page")
                 assertEquals(0, overflowPagesCount, "0 overflow pages")
                 assertEquals(1, entriesCount, "1 entry")
+            }
+        }
+    }
+
+    @Test
+    fun `given a small, single-value lmdb database, when dumping the database, then a single kv is returned`() {
+        val expectedKey = "KK123KK"
+        val expectedValue = "VV6666VV"
+        Environment(
+            Paths.get(
+                javaClass.getResource("/databases/little-endian/16KB-page-size/single-entry")!!.toURI()
+            )
+        ).use { env ->
+            env.dump().run {
+                assertEquals(1, size, "1 Key in the map")
+                assertEquals(expectedKey, keys.first(), "Key is $expectedKey")
+                assertEquals(expectedValue, String(get(expectedKey)!!), "Value is $expectedValue")
             }
         }
     }

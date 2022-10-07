@@ -27,7 +27,11 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
     private val mapped: MappedByteBuffer
     private val pageSize: UInt
     private val supportedPageSizes = listOf(4u * 1024u, 8u * 1024u, 16u * 1024u)
+
+    private val metadata: MetaDataPage64
+
     val stat: Stat
+
 
     /**
      * Constructor will detect the page size of the database and extract the metadata page, which can be used to populate
@@ -51,6 +55,7 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
         }
 
         this.pageSize = detectedPageSize
+        this.metadata = metadata
         this.stat = Stat(
             detectedPageSize,
             metadata.mainDb.depth.toUInt(),
@@ -68,6 +73,38 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
         if (rootPageNumber >= 0) { // -1 is an empty db
             assert(rootPageNumber <= UInt.MAX_VALUE.toLong())
         }
+    }
+
+    fun dump(): Map<String, ByteArray> {
+        if (this.metadata.mainDb.rootPageNumber == -1L) {
+            return emptyMap()
+        }
+        val rootPage = getPage(this.metadata.mainDb.rootPageNumber.toUInt())
+        return dumpPage(rootPage)
+    }
+
+    private fun dumpPage(page: Page): Map<String, ByteArray> {
+        when (page) {
+            is LeafPage -> {
+                return page.nodes.associate {
+                    when (it.value) {
+                        is Either.Left -> {
+                            String(it.key) to it.value.left
+                        }
+
+                        is Either.Right -> (String(it.key) to overflowValue(it.value.right.toUInt()))
+                    }
+                }
+            }
+
+            else -> TODO("Not implemented")
+        }
+    }
+
+    private fun overflowValue(pageNumber: UInt): ByteArray {
+        val page = getPage(pageNumber)
+        assert(page is OverflowPage)
+        return (page as OverflowPage).value
     }
 
     /**
@@ -143,7 +180,7 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
         } else if (pageHeader.flags.get(PAGE_LEAF)) {
             LeafPage(pageHeader, pageBuffer)
         } else if (pageHeader.flags.get(PAGE_OVERFLOW)) {
-            throw UnsupportedPageTypeException(pageHeader.flags)
+            OverflowPage(pageHeader, pageBuffer)
         } else if (pageHeader.flags.get(PAGE_BRANCH)) {
             throw UnsupportedPageTypeException(pageHeader.flags)
         } else {
@@ -164,8 +201,7 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
         val flags: BitSet
         val kSize: UShort
         val key: ByteArray
-        val value: ByteArray
-        val overflowPage: Long
+        val value: Either<ByteArray, Long> // The value is either a bytearray or a reference to an overflow page
 
         init {
             logger.trace { "Parsing leaf node at ${buffer.position()}" }
@@ -182,15 +218,13 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
             logger.trace { "Key value is ${key.toHex()} or ${key.toAscii()}" }
             val valueSize = lo + (hi.toUInt().shl(16))
 
-            //TODO BigData
-            if (flags.get(NODE_BIGDATA)) {
-                overflowPage = buffer.long.also { logger.trace { "Value is bigdata at page $it" } }
-                value = ByteArray(0)
+            value = if (flags.get(NODE_BIGDATA)) {
+                Either.Right(buffer.long.also { logger.trace { "Value is bigdata at page $it" } })
             } else {
                 logger.trace { "Value is $valueSize bytes at ${buffer.position()}" }
-                value = ByteArray(valueSize.toInt()).apply(buffer::get)
-                logger.trace { "Value is ${value.toHex()} or ${value.toAscii()}" }
-                overflowPage = 0
+                Either.Left(
+                    ByteArray(valueSize.toInt()).apply(buffer::get)
+                        .also { logger.trace { "Value is ${it.toHex()} or ${it.toAscii()}" } })
             }
         }
     }
@@ -264,6 +298,31 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
                     LeafNode(buffer)
                 }
         )
+    }
+
+    data class OverflowPage(val pageHeader: PageHeader, val value: ByteArray) : Page {
+        constructor(pageHeader: PageHeader, buffer: ByteBuffer) : this(
+            pageHeader,
+            value = ByteArray(0)
+        )
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as OverflowPage
+
+            if (pageHeader != other.pageHeader) return false
+            if (!value.contentEquals(other.value)) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = pageHeader.hashCode()
+            result = 31 * result + value.contentHashCode()
+            return result
+        }
     }
 
     //
