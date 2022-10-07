@@ -4,7 +4,7 @@ import java.util.*
 
 class UnableToDetectPageSizeException : Throwable()
 
-class UnsupportedPageTypeException(private val flags: BitSet) : Throwable() {
+class UnsupportedPageTypeException(private val flags: EnumSet<Flags.Page>) : Throwable() {
     override fun toString(): String {
         return "${super.toString()} : $flags"
     }

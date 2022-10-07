@@ -202,14 +202,14 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
         logger.trace { "Getting page $number" }
         val pageBuffer = ByteBuffer.wrap(getRawPage(number, pageSize)).also { it.order(BYTE_ORDER) }
         val pageHeader = PageHeader(pageBuffer)
-        return if (pageHeader.flags.get(PAGE_META)) {
+        return if (pageHeader.flags.contains(Flags.Page.META)) {
             pageBuffer.position(PageHeader.SIZE.toInt())
             MetaDataPage64(pageBuffer)
-        } else if (pageHeader.flags.get(PAGE_LEAF)) {
+        } else if (pageHeader.flags.contains(Flags.Page.LEAF)) {
             LeafPage(pageHeader, pageBuffer)
-        } else if (pageHeader.flags.get(PAGE_OVERFLOW)) {
+        } else if (pageHeader.flags.contains(Flags.Page.OVERFLOW)) {
             OverflowPage(pageHeader)
-        } else if (pageHeader.flags.get(PAGE_BRANCH)) {
+        } else if (pageHeader.flags.contains(Flags.Page.BRANCH)) {
             BranchPage(pageHeader, pageBuffer)
         } else {
             throw UnsupportedPageTypeException(pageHeader.flags)
@@ -235,7 +235,7 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
         private val logger = KotlinLogging.logger {}
         val lo: UShort
         val hi: UShort
-        val flags: BitSet
+        val flags: EnumSet<Flags.Node>
         val kSize: UShort
         val valueSize: UInt
         val key: ByteArray
@@ -246,10 +246,7 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
             logger.trace { "Parsing leaf node at ${buffer.position()}" }
             lo = buffer.short.toUShort()
             hi = buffer.short.toUShort()
-            flags = ByteArray(2).let {
-                buffer.get(it)
-                BitSet.valueOf(it)
-            }
+            flags = Flags.fromBuffer(Flags.Node::class.java, buffer, 2u)
             kSize = buffer.short.toUShort()
             logger.trace { "Key is $kSize bytes" }
             logger.trace { "Reading key at ${buffer.position()}" }
@@ -257,7 +254,7 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
             logger.trace { "Key value is ${key.toHex()} or ${key.toAscii()}" }
             valueSize = lo + (hi.toUInt().shl(16))
 
-            value = if (flags.get(NODE_BIGDATA)) {
+            value = if (flags.contains(Flags.Node.BIGDATA)) {
                 Either.Right(buffer.long.also { logger.trace { "Value is bigdata at page $it" } })
             } else {
                 logger.trace { "Value is $valueSize bytes at ${buffer.position()}" }
@@ -404,7 +401,7 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
      */
     data class DB(
         val pad: Int,
-        val flags: BitSet,
+        val flags: EnumSet<Flags.Db>,
         val depth: Short,
         val branchPages: Long,
         val leafPages: Long,
@@ -414,7 +411,7 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
     ) {
         constructor(buffer: ByteBuffer) : this(
             pad = buffer.int,
-            flags = BitSet.valueOf(ByteArray(2).apply(buffer::get)),
+            flags = Flags.fromBuffer(Flags.Db::class.java, buffer, 2u),
             depth = buffer.short,
             branchPages = buffer.long,
             leafPages = buffer.long,
@@ -463,7 +460,7 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
     class PageHeader(buffer: ByteBuffer) {
         val pageNumber: Long
         val padding: UShort
-        val flags: BitSet
+        val flags: EnumSet<Flags.Page>
         val pagesOrRange: Either<UInt, Range>
 
         companion object {
@@ -473,8 +470,8 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
         init {
             pageNumber = buffer.long
             padding = buffer.short.toUShort()
-            flags = BitSet.valueOf(ByteArray(2).apply(buffer::get))
-            pagesOrRange = if (flags.get(PAGE_OVERFLOW)) {
+            flags = Flags.fromBuffer(Flags.Page::class.java, buffer, 2u)
+            pagesOrRange = if (flags.contains(Flags.Page.OVERFLOW)) {
                 Either.Left(buffer.int.toUInt())
             } else {
                 Either.Right(Range(buffer.short.toUShort(), buffer.short.toUShort()))
@@ -501,34 +498,12 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
         }
     }
 
+
     companion object {
         private const val DATA_FILENAME = "data.mdb"
         private const val LOCK_FILENAME = "lock.mdb"
 
         private val BYTE_ORDER = ByteOrder.LITTLE_ENDIAN
-
-        // Page Flags http://www.lmdb.tech/doc/group__mdb__page.html
-        private const val PAGE_BRANCH = 0
-        private const val PAGE_LEAF = 1
-        private const val PAGE_OVERFLOW = 2
-        private const val PAGE_META = 3
-        private const val PAGE_DIRTY = 4
-        private const val PAGE_LEAF2 = 5
-        private const val PAGE_SUBP = 6
-        private const val PAGE_LOOSE = 14
-        private const val PAGE_KEEP = 15
-
-        private const val MDFLAGS_REVERSEKEY = 0
-        private const val MDFLAGS_DUPSORT = 1
-        private const val MDFLAGS_INTEGERKEY = 2
-        private const val MDFLAGS_DUPFIXED = 3
-        private const val MDFLAGS_INTEGERDUP = 4
-        private const val MDFLAGS_REVERSEDUP = 5
-        private const val MDFLAGS_CREATE = 14
-
-        // Node Flags http://www.lmdb.tech/doc/group__mdb__node.html
-        private const val NODE_BIGDATA = 0
-        private const val NODE_SUBDATA = 1
-        private const val NODE_DUPDATA = 2
     }
 }
+
