@@ -11,7 +11,7 @@ import kotlin.io.path.fileSize
 import kotlin.io.path.isDirectory
 import kotlin.io.path.isRegularFile
 
-class Environment(lmdbPath: Path) : AutoCloseable {
+class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
     private val logger = KotlinLogging.logger {}
     private val fileChannel: FileChannel
     private val mapped: MappedByteBuffer
@@ -30,10 +30,15 @@ class Environment(lmdbPath: Path) : AutoCloseable {
         fileChannel = FileChannel.open(dataFile)
         mapped = fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, dataFile.fileSize())
 
-        val (metadata, pageSize) = getMetadataPage()
-        this.pageSize = pageSize
+        val (metadata, detectedPageSize) = if (pageSize != null) {
+            getMetadataPage(listOf(pageSize))
+        } else {
+            getMetadataPage()
+        }
+
+        this.pageSize = detectedPageSize
         this.stat = Stat(
-            pageSize,
+            detectedPageSize,
             metadata.mainDb.depth.toUInt(),
             metadata.mainDb.branchPages,
             metadata.mainDb.leafPages,
@@ -41,7 +46,7 @@ class Environment(lmdbPath: Path) : AutoCloseable {
             metadata.mainDb.entries
         )
 
-        assert(dataFile.fileSize() % pageSize.toInt() == 0L) { "Data file is not a valid size" }
+        assert(dataFile.fileSize() % detectedPageSize.toInt() == 0L) { "Data file is not a valid size" }
         // TODO work out what the right lock file size should be...? It's 8KB on a 16KB pagesize db
 //        assert(lockFile.fileSize() % pageSize.toInt() == 0L) { "Lock file is not a valid size" }
 
@@ -77,19 +82,11 @@ class Environment(lmdbPath: Path) : AutoCloseable {
      * Gets the metadata page. Also tries to detect and return the current page size (because that's a function of whatever
      * _SC_PAGESIZE happens to be on the system generating the database. Often it's 4KB, sometimes 16KB)
      */
-    private fun getMetadataPage(): Pair<MetaDataPage64, UInt> {
-        supportedPageSizes.forEach { testPageSize ->
+    private fun getMetadataPage(testPageSizes: Collection<UInt> = supportedPageSizes): Pair<MetaDataPage64, UInt> {
+        testPageSizes.forEach { testPageSize ->
             try {
-                val first = getPage(0u, testPageSize)
-                assert(first is MetaDataPage64) { "First page is not a metadata page" }
-                val second = getPage(1u, testPageSize)
-                assert(second is MetaDataPage64) { "Second page is not a metadata page" }
-                val selectedPage =
-                    if ((first as MetaDataPage64).txnId > (second as MetaDataPage64).txnId) first else second
-                assert(selectedPage.magic == 0xBEEFC0DE.toUInt()) { "Page does not contain required magic. Instead ${selectedPage.magic}" }
-                assert(selectedPage.version == 1u) { "Invalid page version ${selectedPage.version}" } // Not supporting development version 999
-                logger.trace { "Page size is $testPageSize" }
-                return Pair(selectedPage, testPageSize)
+                val page = getMetadataPageWithPageSize(testPageSize)
+                return Pair(page, testPageSize)
             } catch (e: Throwable) {
                 when (e) {
                     is AssertionError, is UnsupportedPageTypeException -> {
@@ -101,6 +98,19 @@ class Environment(lmdbPath: Path) : AutoCloseable {
             }
         }
         throw UnableToDetectPageSizeException()
+    }
+
+    private fun getMetadataPageWithPageSize(pageSize: UInt): MetaDataPage64 {
+        val first = getPage(0u, pageSize)
+        assert(first is MetaDataPage64) { "First page is not a metadata page" }
+        val second = getPage(1u, pageSize)
+        assert(second is MetaDataPage64) { "Second page is not a metadata page" }
+        val selectedPage =
+            if ((first as MetaDataPage64).txnId > (second as MetaDataPage64).txnId) first else second
+        assert(selectedPage.magic == 0xBEEFC0DE.toUInt()) { "Page does not contain required magic. Instead ${selectedPage.magic}" }
+        assert(selectedPage.version == 1u) { "Invalid page version ${selectedPage.version}" } // Not supporting development version 999
+        logger.trace { "Page size is $pageSize" }
+        return selectedPage
     }
 
     private fun getPage(number: UInt, pageSize: UInt = this.pageSize): Page {
