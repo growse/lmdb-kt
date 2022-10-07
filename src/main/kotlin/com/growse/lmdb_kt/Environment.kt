@@ -1,5 +1,6 @@
 package com.growse.lmdb_kt
 
+import com.growse.lmdb_kt.Environment.Stat
 import mu.KotlinLogging
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -11,6 +12,15 @@ import kotlin.io.path.fileSize
 import kotlin.io.path.isDirectory
 import kotlin.io.path.isRegularFile
 
+/**
+ * LMDB Environment. Represents a directory on disk containing one or more databases.
+ *
+ * @constructor
+ * Detects the page size of the database and extract the metadata page, which can be used to populate the [Stat] structure
+ *
+ * @param lmdbPath path to the LMDB directory on disk
+ * @param pageSize optionally specify the page size to use. If not specified, auto-detection is attempted
+ */
 class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
     private val logger = KotlinLogging.logger {}
     private val fileChannel: FileChannel
@@ -19,6 +29,10 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
     private val supportedPageSizes = listOf(4u * 1024u, 8u * 1024u, 16u * 1024u)
     val stat: Stat
 
+    /**
+     * Constructor will detect the page size of the database and extract the metadata page, which can be used to populate
+     * the [Stat] structure
+     */
     init {
         val dataFile = lmdbPath.resolve(DATA_FILENAME)
         val lockFile = lmdbPath.resolve(LOCK_FILENAME)
@@ -53,10 +67,7 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
         val rootPageNumber = metadata.mainDb.rootPageNumber
         if (rootPageNumber >= 0) { // -1 is an empty db
             assert(rootPageNumber <= UInt.MAX_VALUE.toLong())
-            logger.trace { "Fetching root page" }
-            val rootPage = getPage(rootPageNumber.toUInt())
         }
-
     }
 
     /**
@@ -81,6 +92,8 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
     /**
      * Gets the metadata page. Also tries to detect and return the current page size (because that's a function of whatever
      * _SC_PAGESIZE happens to be on the system generating the database. Often it's 4KB, sometimes 16KB)
+     * @param testPageSizes a list of page sizes to try
+     * @return the parsed metadatapage and the detected pageSize
      */
     private fun getMetadataPage(testPageSizes: Collection<UInt> = supportedPageSizes): Pair<MetaDataPage64, UInt> {
         testPageSizes.forEach { testPageSize ->
@@ -113,6 +126,13 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
         return selectedPage
     }
 
+    /**
+     * Parses the given page number into the correct structure
+     *
+     * @param number the page number to parse
+     * @param pageSize the pageSize of the database
+     * @return the parsed page
+     */
     private fun getPage(number: UInt, pageSize: UInt = this.pageSize): Page {
         logger.trace { "Getting page $number" }
         val pageBuffer = ByteBuffer.wrap(getRawPage(number, pageSize)).also { it.order(BYTE_ORDER) }
@@ -123,7 +143,7 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
         } else if (pageHeader.flags.get(PAGE_LEAF)) {
             LeafPage(pageHeader, pageBuffer)
         } else if (pageHeader.flags.get(PAGE_OVERFLOW)) {
-            EmptyPage()
+            throw UnsupportedPageTypeException(pageHeader.flags)
         } else if (pageHeader.flags.get(PAGE_BRANCH)) {
             throw UnsupportedPageTypeException(pageHeader.flags)
         } else {
