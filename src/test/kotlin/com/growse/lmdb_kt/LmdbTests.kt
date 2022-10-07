@@ -29,6 +29,20 @@ class LmdbTests {
 
     @ParameterizedTest
     @MethodSource("databasesWithStats")
+    fun `given an environment, when fetching the stats, then the correct pagesize is detected`(
+        dbPath: String,
+        expectedPageSize: Int,
+    ) {
+        Environment(Paths.get(javaClass.getResource(dbPath)!!.toURI())).use { env ->
+            env.stat.run {
+                assertEquals(expectedPageSize, pageSize.toInt(), "Page size")
+            }
+        }
+    }
+
+
+    @ParameterizedTest
+    @MethodSource("databasesWithStats")
     fun `given an environment, when fetching the stats, then the correct stats are returned`(
         dbPath: String,
         expectedPageSize: Int,
