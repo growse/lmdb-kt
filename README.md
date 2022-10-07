@@ -4,6 +4,8 @@ A library to read/write [lmdb](http://www.lmdb.tech/doc/) databases without rely
 
 ## TODO
 - [X] Stat
+- [X] Dump
+- [ ] Read txns
 - [ ] Getting key / values
 - [ ] Putting key / values
 - [ ] Deleting keys

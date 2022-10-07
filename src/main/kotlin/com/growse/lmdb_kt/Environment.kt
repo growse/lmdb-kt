@@ -390,7 +390,6 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
         }
     }
 
-    //
     /**
      * Represents a single database
      * http://www.lmdb.tech/doc/group__internal.html#structMDB__db

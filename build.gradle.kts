@@ -15,7 +15,7 @@ dependencies {
     implementation("io.github.microutils:kotlin-logging-jvm:3.0.0")
     testImplementation(kotlin("test"))
     testImplementation("org.slf4j:slf4j-simple:2.0.3")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.1.0")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.9.0")
 }
 
 tasks.test {
