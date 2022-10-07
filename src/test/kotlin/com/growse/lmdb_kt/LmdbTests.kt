@@ -99,8 +99,9 @@ class LmdbTests {
                 arguments("/databases/little-endian/16KB-page-size/100-random-values", 16384, 2, 1L, 42L, 1L, 100L),
                 arguments("/databases/little-endian/4KB-page-size/empty", 4096, 0, 0L, 0L, 0L, 0L),
                 arguments("/databases/little-endian/4KB-page-size/single-entry", 4096, 1, 0L, 1L, 0L, 1L),
-                arguments("/databases/little-endian/4KB-page-size/single-large-value", 4096, 1, 0L, 1L, 3L, 1L),
-                arguments("/databases/little-endian/4KB-page-size/100-random-values", 4096, 2, 1L, 42L, 1L, 100L),
+                arguments("/databases/little-endian/4KB-page-size/single-large-value", 4096, 1, 0L, 1L, 9L, 1L),
+                arguments("/databases/little-endian/4KB-page-size/100-random-values", 4096, 3, 3L, 16L, 130L, 100L),
+                arguments("/databases/little-endian/4KB-page-size/single-entry-after-deleted", 4096, 1, 0L, 1L, 0L, 1L),
             )
 
         @JvmStatic
@@ -108,17 +109,17 @@ class LmdbTests {
             dbPath: String, expectedNumberOfEntries: Int, expected
              */
             Stream.of(
-                arguments("/databases/little-endian/16KB-page-size/empty", 16384, emptyMap<String, LengthAndDigest>()),
-                arguments(
-                    "/databases/little-endian/16KB-page-size/single-entry",
-                    16384,
-                    mapOf("KK123KK" to LengthAndDigest(8, "d2781036b05df83b95dd20f5a497102b"))
-                ),
-                arguments(
-                    "/databases/little-endian/16KB-page-size/single-large-value",
-                    16384,
-                    mapOf("KK123KK" to LengthAndDigest(33000, "79a965574a648d48fc612f28cc49e570"))
-                ),
+//                arguments("/databases/little-endian/16KB-page-size/empty", 16384, emptyMap<String, LengthAndDigest>()),
+//                arguments(
+//                    "/databases/little-endian/16KB-page-size/single-entry",
+//                    16384,
+//                    mapOf("KK123KK" to LengthAndDigest(8, "d2781036b05df83b95dd20f5a497102b"))
+//                ),
+//                arguments(
+//                    "/databases/little-endian/16KB-page-size/single-large-value",
+//                    16384,
+//                    mapOf("KK123KK" to LengthAndDigest(33000, "79a965574a648d48fc612f28cc49e570"))
+//                ),
                 arguments("/databases/little-endian/16KB-page-size/100-random-values", 16384, Paths.get(
                     this::class.java.getResource("/100-key-values.csv")!!.toURI()
                 ).bufferedReader().lines().asSequence().associate {
@@ -126,24 +127,24 @@ class LmdbTests {
                         this[0].trim() to LengthAndDigest(this[1].trim().toInt(), this[2].trim())
                     }
                 }),
-                arguments("/databases/little-endian/4KB-page-size/empty", 4096, emptyMap<String, LengthAndDigest>()),
-                arguments(
-                    "/databases/little-endian/4KB-page-size/single-entry",
-                    4096,
-                    mapOf("KK123KK" to LengthAndDigest(8, "d2781036b05df83b95dd20f5a497102b"))
-                ),
-                arguments(
-                    "/databases/little-endian/4KB-page-size/single-large-value",
-                    4096,
-                    mapOf("KK123KK" to LengthAndDigest(33000, "79a965574a648d48fc612f28cc49e570"))
-                ),
-                arguments("/databases/little-endian/4KB-page-size/100-random-values", 4096, Paths.get(
-                    this::class.java.getResource("/100-key-values.csv")!!.toURI()
-                ).bufferedReader().lines().asSequence().associate {
-                    it.split(",").run {
-                        this[0].trim() to LengthAndDigest(this[1].trim().toInt(), this[2].trim())
-                    }
-                }),
+//                arguments("/databases/little-endian/4KB-page-size/empty", 4096, emptyMap<String, LengthAndDigest>()),
+//                arguments(
+//                    "/databases/little-endian/4KB-page-size/single-entry",
+//                    4096,
+//                    mapOf("KK123KK" to LengthAndDigest(8, "d2781036b05df83b95dd20f5a497102b"))
+//                ),
+//                arguments(
+//                    "/databases/little-endian/4KB-page-size/single-large-value",
+//                    4096,
+//                    mapOf("KK123KK" to LengthAndDigest(33000, "79a965574a648d48fc612f28cc49e570"))
+//                ),
+//                arguments("/databases/little-endian/4KB-page-size/100-random-values", 4096, Paths.get(
+//                    this::class.java.getResource("/100-key-values.csv")!!.toURI()
+//                ).bufferedReader().lines().asSequence().associate {
+//                    it.split(",").run {
+//                        this[0].trim() to LengthAndDigest(this[1].trim().toInt(), this[2].trim())
+//                    }
+//                }),
             )
     }
 }
