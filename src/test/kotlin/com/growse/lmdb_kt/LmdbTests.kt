@@ -65,6 +65,19 @@ class LmdbTests {
     }
 
     @Test
+    fun `given an empty lmdb database, when dumping the database, then an empty map is returned`() {
+        Environment(
+            Paths.get(
+                javaClass.getResource("/databases/little-endian/16KB-page-size/empty")!!.toURI()
+            )
+        ).use { env ->
+            env.dump().run {
+                assertEquals(0, size, "Map is empty")
+            }
+        }
+    }
+
+    @Test
     fun `given an lmdb database with a single large value, when trying to stat, then the correct environment stats are returned`() {
         Environment(
             Paths.get(
@@ -78,6 +91,22 @@ class LmdbTests {
                 assertEquals(1, leafPagesCount, "1 leaf page")
                 assertEquals(3, overflowPagesCount, "3 overflow pages")
                 assertEquals(1, entriesCount, "1 entry")
+            }
+        }
+    }
+
+    @Test
+    fun `given an lmdb database with a single large value, when dumping the database, then a single kv is returned`() {
+        val expectedKey = "KK123KK"
+        Environment(
+            Paths.get(
+                javaClass.getResource("/databases/little-endian/16KB-page-size/single-large-value")!!.toURI()
+            )
+        ).use { env ->
+            env.dump().run {
+                assertEquals(1, size, "1 key in the map")
+                assertEquals(expectedKey, keys.first(), "Page size is 16KB")
+                assertEquals(33000, get(expectedKey)!!.size, "Value has correct size")
             }
         }
     }
