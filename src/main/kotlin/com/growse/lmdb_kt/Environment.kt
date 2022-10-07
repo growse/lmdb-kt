@@ -44,7 +44,7 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
         assert(dataFile.isRegularFile()) { "Supplied path does not contain a data file" }
         assert(lockFile.isRegularFile()) { "Supplied path does not contain a lock file" }
 
-
+        logger.trace { "Mapping file $dataFile" }
         fileChannel = FileChannel.open(dataFile)
         mapped = fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, dataFile.fileSize())
 
@@ -75,6 +75,18 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
         }
     }
 
+    override fun close() {
+        logger.trace { "Close" }
+        if (fileChannel.isOpen) {
+            fileChannel.close()
+        }
+    }
+
+    /**
+     * Dumps all keys/values out
+     *
+     * @return a map of keys (as strings) and values
+     */
     fun dump(): Map<String, ByteArray> {
         if (this.metadata.mainDb.rootPageNumber == -1L) {
             return emptyMap()
@@ -83,44 +95,43 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
         return dumpPage(rootPage)
     }
 
+    /**
+     * Dumps the keys/values from a specific page. Walks through to child pages
+     *
+     * @param page the page to dump data for
+     * @return a map of keys/values
+     */
     private fun dumpPage(page: Page): Map<String, ByteArray> {
         when (page) {
             is LeafPage -> {
-                return page.nodes.associate {
-                    when (it.value) {
+                return page.nodes.associate { leafNode ->
+                    when (leafNode.value) {
                         is Either.Left -> {
-                            String(it.key) to it.value.left
+                            String(leafNode.key) to leafNode.value.left
                         }
 
-                        is Either.Right -> (String(it.key) to overflowValue(it.valueSize, it.value.right.toUInt()))
+                        // It's an overflow value
+                        is Either.Right -> {
+                            val overflowPage = getPage(leafNode.value.right.toUInt())
+                            assert(overflowPage is OverflowPage)
+                            String(leafNode.key) to (overflowPage as OverflowPage).getValue(
+                                leafNode.valueSize,
+                                this.pageSize,
+                                mapped
+                            )
+                        }
                     }
                 }
             }
 
-            else -> TODO("Not implemented")
-        }
-    }
-
-    /**
-     * Gets the value of an overflow page. Overflow values start at an overflow page, and then run through contiguous
-     * pages.
-     *
-     * @param size the size of the overflow value to read. Should be less thon number of overflow pages * pageSize
-     * @param pageNumber the number of the overflow page to read
-     * @return the value from the overflow page
-     */
-    private fun overflowValue(size: UInt, pageNumber: UInt): ByteArray {
-        val page = getPage(pageNumber)
-        assert(page is OverflowPage)
-
-        return (page as OverflowPage).run {
-            assert(pageHeader.pagesOrRange is Either.Left) { "Overflow page does not have pageCount value" }
-            val numberOfPages = (pageHeader.pagesOrRange as Either.Left).left
-            assert(size < numberOfPages * pageSize) { "Requested value size is bigger than fits in number of pages" }
-            ByteArray(size.toInt()).apply {
-                mapped.position(((pageNumber * pageSize) + PageHeader.SIZE).toInt())
-                mapped.get(this)
+            is BranchPage -> {
+                return page.nodes.map { nodeAddress ->
+                    logger.trace { "Branch node points to page at ${nodeAddress.childPage}" }
+                    dumpPage(getPage(nodeAddress.childPage, pageSize))
+                }.fold(mutableMapOf()) { acc, map -> acc.apply { putAll(map) } }
             }
+
+            else -> TODO("Not implemented")
         }
     }
 
@@ -199,7 +210,7 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
         } else if (pageHeader.flags.get(PAGE_OVERFLOW)) {
             OverflowPage(pageHeader)
         } else if (pageHeader.flags.get(PAGE_BRANCH)) {
-            throw UnsupportedPageTypeException(pageHeader.flags)
+            BranchPage(pageHeader, pageBuffer)
         } else {
             throw UnsupportedPageTypeException(pageHeader.flags)
         }
@@ -208,7 +219,16 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
 
     interface Node
 
-    // http://www.lmdb.tech/doc/group__internal.html#structMDB__node
+    /**
+     * A structure that represents a single key/value pair. Bundled together to form a [LeafPage]. Each node can either
+     * contain the key and value contiguously if they fit within the space available in the page, or with the [NODE_BIGDATA]
+     * flag set the node will point towards another [OverflowPage] which contains the value.
+     *
+     * @constructor
+     * Parses the node data from the buffer
+     *
+     * @param buffer a [ByteBuffer] that contains the Node
+     */
     class LeafNode(
         buffer: ByteBuffer
     ) : Node {
@@ -248,21 +268,30 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
         }
     }
 
-    private fun getRawPage(number: UInt, pageSize: UInt): ByteArray = mapped.run {
-        ByteArray(pageSize.toInt()).also {
-            position(number.toInt() * pageSize.toInt())
-            get(it)
-        }
-    }
+    data class BranchNode(val buffer: ByteBuffer) : Node {
+        private val logger = KotlinLogging.logger {}
+        val lo: UShort
+        val hi: UShort
+        val flags: BitSet
+        val kSize: UShort
+        val key: ByteArray
+        val childPage: UInt
 
-
-    fun keys(): Iterable<ByteArray> {
-        TODO()
-    }
-
-    override fun close() {
-        if (fileChannel.isOpen) {
-            fileChannel.close()
+        init {
+            logger.trace { "Parsing branch node at ${buffer.position()}" }
+            lo = buffer.short.toUShort()
+            hi = buffer.short.toUShort()
+            flags = ByteArray(2).let {
+                buffer.get(it)
+                BitSet.valueOf(it)
+            }
+            kSize = buffer.short.toUShort()
+            logger.trace { "Key is $kSize bytes" }
+            logger.trace { "Reading key at ${buffer.position()}" }
+            key = ByteArray(kSize.toInt()).apply(buffer::get)
+            logger.trace { "Key value is ${key.toHex()} or ${key.toAscii()}" }
+            childPage = lo + (hi.toUInt().shl(16))
+            logger.trace { "Child page is at $childPage" }
         }
     }
 
@@ -304,6 +333,12 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
         )
     }
 
+    /**
+     * A Leaf page contains a bunch of [LeafNode]s.
+     *
+     * @property pageHeader the page header
+     * @property nodes a list of [LeafNode]
+     */
     data class LeafPage(
         val pageHeader: PageHeader,
         val nodes: List<LeafNode>
@@ -319,10 +354,45 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
         )
     }
 
-    data class OverflowPage(val pageHeader: PageHeader) : Page
+    data class BranchPage(
+        val pageHeader: PageHeader,
+        val nodes: List<BranchNode>
+    ) : Page {
+        constructor(pageHeader: PageHeader, buffer: ByteBuffer) : this(
+            pageHeader,
+            nodes = IntRange(1, pageHeader.numKeys())
+                .map { buffer.short }
+                .map {
+                    buffer.position(it.toInt())
+                    BranchNode(buffer)
+                }
+        )
+    }
+
+    data class OverflowPage(val pageHeader: PageHeader) : Page {
+        /**
+         * Gets the value of an overflow page. Overflow values start at an overflow page, and then run through contiguous
+         * pages
+         *
+         * @param valueSize the size of the overflow value to read. Should be less thon number of overflow pages * pageSize
+         * @param pageSize the size of a page
+         * @param mappedBuffer the memory-map
+         * @return the value from reading the page (and any subsequent)
+         */
+        fun getValue(valueSize: UInt, pageSize: UInt, mappedBuffer: MappedByteBuffer): ByteArray {
+            assert(pageHeader.pagesOrRange is Either.Left) { "Overflow page does not have pageCount value" }
+            val numberOfPages = (pageHeader.pagesOrRange as Either.Left).left
+            assert(valueSize < numberOfPages * pageSize) { "Requested value size is bigger than fits in number of pages" }
+            return ByteArray(valueSize.toInt()).apply {
+                mappedBuffer.position(((pageHeader.pageNumber * pageSize.toInt()) + PageHeader.SIZE.toInt()).toInt())
+                mappedBuffer.get(this)
+            }
+        }
+    }
 
     //
     /**
+     * Represents a single database
      * http://www.lmdb.tech/doc/group__internal.html#structMDB__db
      *  uint32_t 	md_pad
      *  uint16_t 	md_flags
@@ -356,11 +426,41 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
 
     }
 
+    /**
+     * A structure representing a byte range in a buffer
+     *
+     * @property lower
+     * @property upper
+     */
     data class Range(
         val lower: UShort,
         val upper: UShort
     )
 
+    /**
+     * Represents a page header
+     * http://www.lmdb.tech/doc/group__internal.html#structMDB__page
+     *
+     *  union {
+     *      pgno_t   p_pgno
+     *      struct MDB_page *   p_next
+     *  } 	mp_p
+     *  uint16_t 	mp_pad
+     *  uint16_t 	mp_flags
+     *  union {
+     *      struct {
+     *          indx_t   pb_lower
+     *          indx_t   pb_upper
+     *      }   pb
+     *      uint32_t   pb_pages
+     *  } 	mp_pb
+     *  indx_t 	mp_ptrs
+     *
+     * @constructor
+     * Parses the page header, determining whether or not the page is an overflow
+     *
+     * @param buffer a [ByteBuffer] for the page
+     */
     class PageHeader(buffer: ByteBuffer) {
         val pageNumber: Long
         val padding: UShort
@@ -385,6 +485,20 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
         fun numKeys(): Int = when (pagesOrRange) {
             is Either.Left -> 0
             is Either.Right -> (pagesOrRange.right.lower.toShort() - 16) / 2
+        }
+    }
+
+    /**
+     * Copies a page out of the memory map into a bytearray
+     *
+     * @param number the number of the page to copy
+     * @param pageSize the size of the page for the database
+     * @return a byte array representing the page
+     */
+    private fun getRawPage(number: UInt, pageSize: UInt): ByteArray = mapped.run {
+        ByteArray(pageSize.toInt()).also {
+            position(number.toInt() * pageSize.toInt())
+            get(it)
         }
     }
 

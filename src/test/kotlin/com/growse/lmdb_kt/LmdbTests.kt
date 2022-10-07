@@ -10,6 +10,8 @@ import org.slf4j.simple.SimpleLogger
 import java.nio.file.Paths
 import java.security.MessageDigest
 import java.util.stream.Stream
+import kotlin.io.path.bufferedReader
+import kotlin.streams.asSequence
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -36,7 +38,7 @@ class LmdbTests {
         expectedOverflowPagesCount: Long,
         expectedEntriesCount: Long
     ) {
-        Environment(Paths.get(javaClass.getResource(dbPath)!!.toURI())).use { env ->
+        Environment(Paths.get(javaClass.getResource(dbPath)!!.toURI()), expectedPageSize.toUInt()).use { env ->
             env.stat.run {
                 assertEquals(expectedPageSize, pageSize.toInt(), "Page size")
                 assertEquals(expectedTreeDepth, treeDepth.toInt(), "Tree depth")
@@ -48,12 +50,12 @@ class LmdbTests {
         }
     }
 
-    @ParameterizedTest
+    @ParameterizedTest(name = "{index}: {0}")
     @MethodSource("databasesWithKeysValues")
     fun `given an environment, when dumping the data, then the correct key-values are returned`(
-        dbPath: String, expected: Map<String, LengthAndDigest>
+        dbPath: String, pageSize: Int, expected: Map<String, LengthAndDigest>
     ) {
-        Environment(Paths.get(javaClass.getResource(dbPath)!!.toURI())).use { env ->
+        Environment(Paths.get(javaClass.getResource(dbPath)!!.toURI()), pageSize.toUInt()).use { env ->
             env.dump().run {
                 assertEquals(expected.size, size, "Entry count")
                 expected.keys.forEach {
@@ -79,7 +81,8 @@ class LmdbTests {
             Stream.of(
                 arguments("/databases/little-endian/16KB-page-size/empty", 16384, 0, 0L, 0L, 0L, 0L),
                 arguments("/databases/little-endian/16KB-page-size/single-entry", 16384, 1, 0L, 1L, 0L, 1L),
-                arguments("/databases/little-endian/16KB-page-size/single-large-value", 16384, 1, 0L, 1L, 3L, 1L)
+                arguments("/databases/little-endian/16KB-page-size/single-large-value", 16384, 1, 0L, 1L, 3L, 1L),
+                arguments("/databases/little-endian/16KB-page-size/100-random-values", 16384, 2, 1L, 42L, 1L, 100L)
             )
 
         @JvmStatic
@@ -87,16 +90,25 @@ class LmdbTests {
             dbPath: String, expectedNumberOfEntries: Int, expected
              */
             Stream.of(
-                arguments("/databases/little-endian/16KB-page-size/empty", emptyMap<String, LengthAndDigest>()),
+                arguments("/databases/little-endian/16KB-page-size/empty", 16384, emptyMap<String, LengthAndDigest>()),
                 arguments(
                     "/databases/little-endian/16KB-page-size/single-entry",
+                    16384,
                     mapOf("KK123KK" to LengthAndDigest(8, "d2781036b05df83b95dd20f5a497102b"))
                 ),
                 arguments(
                     "/databases/little-endian/16KB-page-size/single-large-value",
+                    16384,
                     mapOf("KK123KK" to LengthAndDigest(33000, "79a965574a648d48fc612f28cc49e570"))
-                )
-            )
+                ),
+                arguments("/databases/little-endian/16KB-page-size/100-random-values", 16384, Paths.get(
+                    this::class.java.getResource("/databases/little-endian/16KB-page-size/100-random-values")!!.toURI()
+                ).resolve("values.csv").bufferedReader().lines().asSequence().associate {
+                        it.split(",").run {
+                            this[0].trim() to LengthAndDigest(this[1].trim().toInt(), this[2].trim())
+                        }
+                    }
+                ))
     }
 }
 
