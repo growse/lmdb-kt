@@ -2,113 +2,20 @@ package com.growse.lmdb_kt
 
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.Arguments.arguments
+import org.junit.jupiter.params.provider.MethodSource
 import org.slf4j.simple.SimpleLogger
 import java.nio.file.Paths
+import java.security.MessageDigest
+import java.util.stream.Stream
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class LmdbTests {
     init {
         System.setProperty(SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "TRACE");
-    }
-
-    @Test
-    fun `given a small, single-value lmdb database, when trying to stat, then the correct environment stats are returned`() {
-        Environment(
-            Paths.get(
-                javaClass.getResource("/databases/little-endian/16KB-page-size/single-entry")!!.toURI()
-            )
-        ).use { env ->
-            env.stat.run {
-                assertEquals(16384u, pageSize, "Page size is 16KB")
-                assertEquals(1u, treeDepth, "Depth of 1")
-                assertEquals(0, branchPagesCount, "0 branch pages")
-                assertEquals(1, leafPagesCount, "1 leaf page")
-                assertEquals(0, overflowPagesCount, "0 overflow pages")
-                assertEquals(1, entriesCount, "1 entry")
-            }
-        }
-    }
-
-    @Test
-    fun `given a small, single-value lmdb database, when dumping the database, then a single kv is returned`() {
-        val expectedKey = "KK123KK"
-        val expectedValue = "VV6666VV"
-        Environment(
-            Paths.get(
-                javaClass.getResource("/databases/little-endian/16KB-page-size/single-entry")!!.toURI()
-            )
-        ).use { env ->
-            env.dump().run {
-                assertEquals(1, size, "1 Key in the map")
-                assertEquals(expectedKey, keys.first(), "Key is $expectedKey")
-                assertEquals(expectedValue, String(get(expectedKey)!!), "Value is $expectedValue")
-            }
-        }
-    }
-
-    @Test
-    fun `given an empty lmdb database, when trying to stat, then the correct environment stats are returned`() {
-        Environment(
-            Paths.get(
-                javaClass.getResource("/databases/little-endian/16KB-page-size/empty")!!.toURI()
-            )
-        ).use { env ->
-            env.stat.run {
-                assertEquals(16384u, pageSize, "Page size is 16KB")
-                assertEquals(0u, treeDepth, "Depth of 0")
-                assertEquals(0, branchPagesCount, "0 branch pages")
-                assertEquals(0, leafPagesCount, "0 leaf pages")
-                assertEquals(0, overflowPagesCount, "0 overflow pages")
-                assertEquals(0, entriesCount, "0 entries")
-            }
-        }
-    }
-
-    @Test
-    fun `given an empty lmdb database, when dumping the database, then an empty map is returned`() {
-        Environment(
-            Paths.get(
-                javaClass.getResource("/databases/little-endian/16KB-page-size/empty")!!.toURI()
-            )
-        ).use { env ->
-            env.dump().run {
-                assertEquals(0, size, "Map is empty")
-            }
-        }
-    }
-
-    @Test
-    fun `given an lmdb database with a single large value, when trying to stat, then the correct environment stats are returned`() {
-        Environment(
-            Paths.get(
-                javaClass.getResource("/databases/little-endian/16KB-page-size/single-large-value")!!.toURI()
-            )
-        ).use { env ->
-            env.stat.run {
-                assertEquals(16384u, pageSize, "Page size is 16KB")
-                assertEquals(1u, treeDepth, "Depth of 1")
-                assertEquals(0, branchPagesCount, "0 branch pages")
-                assertEquals(1, leafPagesCount, "1 leaf page")
-                assertEquals(3, overflowPagesCount, "3 overflow pages")
-                assertEquals(1, entriesCount, "1 entry")
-            }
-        }
-    }
-
-    @Test
-    fun `given an lmdb database with a single large value, when dumping the database, then a single kv is returned`() {
-        val expectedKey = "KK123KK"
-        Environment(
-            Paths.get(
-                javaClass.getResource("/databases/little-endian/16KB-page-size/single-large-value")!!.toURI()
-            )
-        ).use { env ->
-            env.dump().run {
-                assertEquals(1, size, "1 key in the map")
-                assertEquals(expectedKey, keys.first(), "Page size is 16KB")
-                assertEquals(33000, get(expectedKey)!!.size, "Value has correct size")
-            }
-        }
     }
 
     @Test
@@ -117,5 +24,83 @@ class LmdbTests {
             Environment(Paths.get("boop"))
         }
     }
+
+    @ParameterizedTest
+    @MethodSource("databasesWithStats")
+    fun `given an environment, when fetching the stats, then the correct stats are returned`(
+        dbPath: String,
+        expectedPageSize: Int,
+        expectedTreeDepth: Int,
+        expectedBranchPagesCount: Long,
+        expectedLeafPagesCount: Long,
+        expectedOverflowPagesCount: Long,
+        expectedEntriesCount: Long
+    ) {
+        Environment(Paths.get(javaClass.getResource(dbPath)!!.toURI())).use { env ->
+            env.stat.run {
+                assertEquals(expectedPageSize, pageSize.toInt(), "Page size")
+                assertEquals(expectedTreeDepth, treeDepth.toInt(), "Tree depth")
+                assertEquals(expectedBranchPagesCount, branchPagesCount, "Branch pages")
+                assertEquals(expectedLeafPagesCount, leafPagesCount, "Leaf pages")
+                assertEquals(expectedOverflowPagesCount, overflowPagesCount, "Overflow pages")
+                assertEquals(expectedEntriesCount, entriesCount, "Entries")
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("databasesWithKeysValues")
+    fun `given an environment, when dumping the data, then the correct key-values are returned`(
+        dbPath: String, expected: Map<String, LengthAndDigest>
+    ) {
+        Environment(Paths.get(javaClass.getResource(dbPath)!!.toURI())).use { env ->
+            env.dump().run {
+                assertEquals(expected.size, size, "Entry count")
+                expected.keys.forEach {
+                    assertTrue(keys.contains(it), "Key exists in dump")
+                    assertEquals(expected[it]!!.length, this[it]!!.size, "Value size is correct for $it")
+                    assertEquals(expected[it]!!.digest, this[it]!!.digest())
+                }
+            }
+        }
+    }
+
+    companion object {
+        @JvmStatic
+        fun databasesWithStats(): Stream<Arguments> =/*
+            dbPath: String,
+            expectedPageSize: Int,
+            expectedTreeDepth: Int,
+            expectedBranchPagesCount: Long,
+            expectedLeafPagesCount: Long,
+            expectedOverflowPagesCount: Long,
+            expectedEntriesCount: Long
+             */
+            Stream.of(
+                arguments("/databases/little-endian/16KB-page-size/empty", 16384, 0, 0L, 0L, 0L, 0L),
+                arguments("/databases/little-endian/16KB-page-size/single-entry", 16384, 1, 0L, 1L, 0L, 1L),
+                arguments("/databases/little-endian/16KB-page-size/single-large-value", 16384, 1, 0L, 1L, 3L, 1L)
+            )
+
+        @JvmStatic
+        fun databasesWithKeysValues(): Stream<Arguments> =/*
+            dbPath: String, expectedNumberOfEntries: Int, expected
+             */
+            Stream.of(
+                arguments("/databases/little-endian/16KB-page-size/empty", emptyMap<String, LengthAndDigest>()),
+                arguments(
+                    "/databases/little-endian/16KB-page-size/single-entry",
+                    mapOf("KK123KK" to LengthAndDigest(8, "d2781036b05df83b95dd20f5a497102b"))
+                ),
+                arguments(
+                    "/databases/little-endian/16KB-page-size/single-large-value",
+                    mapOf("KK123KK" to LengthAndDigest(33000, "79a965574a648d48fc612f28cc49e570"))
+                )
+            )
+    }
 }
 
+private fun ByteArray.digest(): String = MessageDigest.getInstance("MD5").digest(this).toHex()
+
+
+data class LengthAndDigest(val length: Int, val digest: String)
