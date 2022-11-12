@@ -32,7 +32,6 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
 
     val stat: Stat
 
-
     /**
      * Constructor will detect the page size of the database and extract the metadata page, which can be used to populate
      * the [Stat] structure
@@ -216,7 +215,6 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
         }
     }
 
-
     interface Node
 
     /**
@@ -260,7 +258,8 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
                 logger.trace { "Value is $valueSize bytes at ${buffer.position()}" }
                 Either.Left(
                     ByteArray(valueSize.toInt()).apply(buffer::get)
-                        .also { logger.trace { "Value is ${it.toHex()} or ${it.toAscii()}" } })
+                        .also { logger.trace { "Value is ${it.toHex()} or ${it.toAscii()}" } }
+                )
             }
         }
     }
@@ -295,7 +294,6 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
     interface Page
     class EmptyPage : Page
 
-
     interface MetaDataPage : Page
 
     /**
@@ -316,7 +314,7 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
         val freeDb: DB,
         val mainDb: DB,
         val lastPage: ULong,
-        val txnId: ULong,
+        val txnId: ULong
     ) : MetaDataPage {
         constructor(buffer: ByteBuffer) : this(
             magic = buffer.int.toUInt(),
@@ -407,7 +405,7 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
         val leafPages: Long,
         val overflowPages: Long,
         val entries: Long,
-        val rootPageNumber: Long,
+        val rootPageNumber: Long
     ) {
         constructor(buffer: ByteBuffer) : this(
             pad = buffer.int,
@@ -419,7 +417,6 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
             entries = buffer.long,
             rootPageNumber = buffer.long
         )
-
     }
 
     /**
@@ -498,7 +495,6 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
         }
     }
 
-
     companion object {
         private const val DATA_FILENAME = "data.mdb"
         private const val LOCK_FILENAME = "lock.mdb"
@@ -506,4 +502,3 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
         private val BYTE_ORDER = ByteOrder.LITTLE_ENDIAN
     }
 }
-

@@ -51,9 +51,11 @@ class Flags {
                 buffer.positionRelative(byteCount.toInt())
                 val constants = clazz.enumConstants
                 EnumSet.noneOf(clazz).apply {
-                    addAll(IntRange(0, bitset.size()).flatMap {
-                        if (bitset[it]) listOf(constants[it]) else emptyList()
-                    })
+                    addAll(
+                        IntRange(0, bitset.size()).flatMap {
+                            if (bitset[it]) listOf(constants[it]) else emptyList()
+                        }
+                    )
                 }
             }
     }
