@@ -21,7 +21,8 @@ import kotlin.io.path.isRegularFile
  * @param lmdbPath path to the LMDB directory on disk
  * @param pageSize optionally specify the page size to use. If not specified, auto-detection is attempted
  */
-class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
+class Environment(lmdbPath: Path, pageSize: UInt? = null, readOnly: Boolean = false, locking: Boolean = true) :
+    AutoCloseable {
     private val logger = KotlinLogging.logger {}
     private val fileChannel: FileChannel
     private val mapped: MappedByteBuffer
@@ -37,6 +38,8 @@ class Environment(lmdbPath: Path, pageSize: UInt? = null) : AutoCloseable {
      * the [Stat] structure
      */
     init {
+        assert(readOnly) { "Writes are not currently implemented" }
+        assert(!locking) { "Locking is not currently implemented" }
         val dataFile = lmdbPath.resolve(DATA_FILENAME)
         val lockFile = lmdbPath.resolve(LOCK_FILENAME)
         assert(lmdbPath.isDirectory()) { "Supplied path is not a directory" }
