@@ -28,9 +28,9 @@ data class LeafNode(
 	val valueSize: UInt = lo + (hi.toUInt().shl(16))
 
 	val value: Either<ByteArray, Long> // The value is either a bytearray or a reference to an overflow page
-		get() {
+		by lazy {
 			buffer.position(position + 8 + keySize.toInt())
-			return if (flags.contains(Node.Flags.BIGDATA)) {
+			if (flags.contains(Node.Flags.BIGDATA)) {
 				Either.Right(buffer.long.also { logger.trace { "Value is bigdata at page $it" } })
 			} else {
 				Either.Left(
