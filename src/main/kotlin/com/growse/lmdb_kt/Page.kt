@@ -24,12 +24,12 @@ interface Page {
 				return nodes.associate { leafNode ->
 					when (leafNode.value) {
 						is Either.Left -> {
-							String(leafNode.key) to leafNode.value.left
+							String(leafNode.key) to (leafNode.value as Either.Left<ByteArray, Long>).left
 						}
 
 						// It's an overflow value
 						is Either.Right -> {
-							val overflowPage = buffer.getPage(leafNode.value.right.toUInt())
+							val overflowPage = buffer.getPage((leafNode.value as Either.Right<ByteArray, Long>).right.toUInt())
 							assert(overflowPage is OverflowPage)
 							String(leafNode.key) to (overflowPage as OverflowPage).getValue(leafNode.valueSize)
 						}
@@ -56,9 +56,9 @@ interface Page {
 				val leafNode = nodes.first { it.key.contentEquals(key.toByteArray()) }
 				logger.trace { "Found it in a leaf node: $leafNode" }
 				when (leafNode.value) {
-					is Either.Left -> Result.success(leafNode.value.left)
+					is Either.Left -> Result.success((leafNode.value as Either.Left<ByteArray, Long>).left)
 					is Either.Right -> {
-						val overflowPage = buffer.getPage(leafNode.value.right.toUInt())
+						val overflowPage = buffer.getPage((leafNode.value as Either.Right<ByteArray, Long>).right.toUInt())
 						assert(overflowPage is OverflowPage)
 						Result.success((overflowPage as OverflowPage).getValue(leafNode.valueSize))
 					}
