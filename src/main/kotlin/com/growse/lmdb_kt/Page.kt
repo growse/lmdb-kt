@@ -48,6 +48,37 @@ interface Page {
 		}
 	}
 
+	fun get(key: String): Result<ByteArray> {
+		logger.trace { "Looking for $key on page $number" }
+		buffer.buffer.position((number * buffer.pageSize).toInt())
+		return when (this) {
+			is LeafPage -> {
+				val leafNode = nodes.first { it.key.contentEquals(key.toByteArray()) }
+				logger.trace { "Found it in a leaf node: $leafNode" }
+				when (leafNode.value) {
+					is Either.Left -> Result.success(leafNode.value.left)
+					is Either.Right -> {
+						val overflowPage = buffer.getPage(leafNode.value.right.toUInt())
+						assert(overflowPage is OverflowPage)
+						Result.success((overflowPage as OverflowPage).getValue(leafNode.valueSize))
+					}
+				}
+			}
+
+			is BranchPage -> {
+				nodes
+					.last { it.key.compareWith(key.toByteArray()) < 0 }
+					.also { logger.trace { "Found it in a branch node. Going to child page: ${it.childPage}" } }.childPage
+					.run(buffer::getPage)
+					.get(key)
+			}
+
+			else -> {
+				Result.failure(Exception("Root page is not a leaf or branch page"))
+			}
+		}
+	}
+
 	/**
 	 * Page flags
 	 * http://www.lmdb.tech/doc/group__mdb__page.html

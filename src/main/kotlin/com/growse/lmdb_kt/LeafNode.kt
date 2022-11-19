@@ -28,25 +28,20 @@ data class LeafNode(
 	val value: Either<ByteArray, Long> // The value is either a bytearray or a reference to an overflow page
 
 	init {
-		logger.trace { "Parsing leaf node at ${buffer.position()}" }
 		lo = buffer.short.toUShort()
 		hi = buffer.short.toUShort()
 		flags = flagsFromBuffer(Node.Flags::class.java, buffer, 2u)
 		kSize = buffer.short.toUShort()
-		logger.trace { "Key is $kSize bytes" }
-		logger.trace { "Reading key at ${buffer.position()}" }
 		key = ByteArray(kSize.toInt()).apply(buffer::get)
-		logger.trace { "Key value is ${key.toHex()} or ${key.toAscii()}" }
+		logger.trace { "Key is $kSize bytes (${key.toHex()} or ${key.toAscii()})" }
 		valueSize = lo + (hi.toUInt().shl(16))
-
 		value = if (flags.contains(Node.Flags.BIGDATA)) {
 			Either.Right(buffer.long.also { logger.trace { "Value is bigdata at page $it" } })
 		} else {
-			logger.trace { "Value is $valueSize bytes at ${buffer.position()}" }
 			Either.Left(
 				ByteArray(valueSize.toInt())
 					.apply(buffer::get)
-					.also { logger.trace { "Value is ${it.toHex()} or ${it.toAscii()}" } }
+					.also { logger.trace { "Value is $valueSize bytes (${it.toHex()} or ${it.toAscii()})" } }
 			)
 		}
 	}

@@ -1,7 +1,9 @@
 package com.growse.lmdb_kt
 
-import java.nio.ByteBuffer
+import mu.KotlinLogging
 import java.util.*
+
+private val logger = KotlinLogging.logger {}
 
 /**
  * Represents a single database
@@ -44,10 +46,20 @@ data class DB(
 	 * @return a map of keys (as strings) and values
 	 */
 	fun dump(): Map<String, ByteArray> {
+		logger.debug { "Dump database" }
 		if (rootPageNumber == -1L) {
 			return emptyMap()
 		}
 		return buffer.getPage(rootPageNumber.toUInt()).dump()
+	}
+
+	fun get(key: String): Result<ByteArray> {
+		logger.debug { "Get key $key from database" }
+		return if (rootPageNumber == -1L) {
+			Result.failure(Exception("Key not found"))
+		} else {
+			buffer.getPage(rootPageNumber.toUInt()).get(key)
+		}
 	}
 
 	/**

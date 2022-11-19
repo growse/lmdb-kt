@@ -93,6 +93,25 @@ class LmdbTests {
 		}
 	}
 
+	@Test
+	fun `given an environment, when getting a key, then the value is returned`() {
+		val key = "KEYimcfsuuqqdufeckfbglgoairkcfhvwsafzwmbpgfbxzhtvlrx"
+		Environment(
+			Paths.get(javaClass.getResource("/databases/little-endian/4KB-page-size/100-random-values")!!.toURI()),
+			readOnly = true,
+			locking = false,
+			byteOrder = ByteOrder.LITTLE_ENDIAN,
+			pageSize = 4096.toUInt()
+		).use { env ->
+			val value = env.getMainDb().get(key)
+			assert(value.isSuccess)
+			value.getOrThrow().run {
+				assertEquals(7209, size)
+				assertEquals("f161ed45d7744c25a2ffd85c828c0543", digest())
+			}
+		}
+	}
+
 	data class DatabaseWithStats(
 		val dbPath: String,
 		val expectedPageSize: Int,

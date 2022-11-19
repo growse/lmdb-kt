@@ -8,7 +8,7 @@ A library to read/write [lmdb](http://www.lmdb.tech/doc/) databases without rely
 - [ ] Publish package
 - [ ] Named databases
 - [ ] Read txns
-- [ ] Getting key / values
+- [X] Getting key / values
 - [ ] Putting key / values
 - [ ] Deleting keys
 - [ ] 64/32-bit detection / support

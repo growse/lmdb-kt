@@ -48,7 +48,9 @@ class Environment(
 		val dataFile = lmdbPath.resolve(DATA_FILENAME)
 		val lockFile = lmdbPath.resolve(LOCK_FILENAME)
 		assert(dataFile.isRegularFile()) { "Supplied path does not contain a data file" }
-		assert(lockFile.isRegularFile()) { "Supplied path does not contain a lock file" }
+		if (locking) {
+			assert(lockFile.isRegularFile()) { "Supplied path does not contain a lock file" }
+		}
 
 		logger.trace { "Mapping file $dataFile" }
 		fileChannel = FileChannel.open(dataFile)
@@ -145,11 +147,11 @@ class Environment(
 		assert(first is MetaDataPage64) { "First page is not a metadata page" }
 		val second = ByteBufferWithPageSize(buffer, pageSize).getPage(1u)
 		assert(second is MetaDataPage64) { "Second page is not a metadata page" }
-		val selectedPage = if ((first as MetaDataPage64).txnId > (second as MetaDataPage64).txnId) first else second
-		assert(selectedPage.magic == 0xBEEFC0DE.toUInt()) { "Page does not contain required magic. Instead ${selectedPage.magic}" }
-		assert(selectedPage.version == 1u) { "Invalid page version ${selectedPage.version}" } // Not supporting development version 999
+		val latestMetadataPage = if ((first as MetaDataPage64).txnId > (second as MetaDataPage64).txnId) first else second
+		assert(latestMetadataPage.magic == 0xBEEFC0DE.toUInt()) { "Page does not contain required magic. Instead ${latestMetadataPage.magic}" }
+		assert(latestMetadataPage.version == 1u) { "Invalid page version ${latestMetadataPage.version}" } // Not supporting development version 999
 		logger.trace { "Page size is $pageSize" }
-		return selectedPage
+		return latestMetadataPage
 	}
 
 	/**
