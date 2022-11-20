@@ -1,7 +1,19 @@
 package com.growse.lmdb_kt
 
-class Transaction(val environment: Environment, val write: Boolean = false) {
-	init {
-		assert(!write) { "Database writes not yet supported " }
+import mu.KotlinLogging
+
+private val logger = KotlinLogging.logger {}
+
+class Transaction(private val metadata: MetaDataPage64) : AutoCloseable {
+	fun openDatabase(name: String = "0"): DB {
+		if (name == "0") {
+			return metadata.mainDb
+		} else {
+			TODO("Named databases not supported yet")
+		}
+	}
+
+	override fun close() {
+		logger.trace { "Close" }
 	}
 }

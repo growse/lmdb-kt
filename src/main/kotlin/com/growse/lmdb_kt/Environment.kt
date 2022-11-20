@@ -11,6 +11,8 @@ import kotlin.io.path.fileSize
 import kotlin.io.path.isDirectory
 import kotlin.io.path.isRegularFile
 
+private val logger = KotlinLogging.logger {}
+
 /**
  * LMDB Environment. Represents a directory on disk containing one or more databases.
  *
@@ -27,14 +29,11 @@ class Environment(
 	locking: Boolean = true,
 	byteOrder: ByteOrder = ByteOrder.nativeOrder()
 ) : AutoCloseable {
-	private val logger = KotlinLogging.logger {}
 	private val fileChannel: FileChannel
-	private val byteBufferWithPageSize: ByteBufferWithPageSize
+	private val mainDbMappedByteBufferWithPageSize: ByteBufferWithPageSize
 	private val supportedPageSizes = listOf(4u * 1024u, 8u * 1024u, 16u * 1024u)
 
-	private val metadata: MetaDataPage64
-
-	val stat: Stat
+	private lateinit var metadataPages: Pair<MetaDataPage64, MetaDataPage64>
 
 	/**
 	 * Constructor will detect the page size of the database and extract the metadata page, which can be used to populate
@@ -57,7 +56,7 @@ class Environment(
 		val mappedFile =
 			fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, dataFile.fileSize()).apply { order(byteOrder) }
 
-		val (metadata, detectedPageSize) = if (pageSize != null) {
+		val (metadataPointers, detectedPageSize) = if (pageSize != null) {
 			getMetadataPage(mappedFile, listOf(pageSize))
 		} else {
 			getMetadataPage(mappedFile)
@@ -67,26 +66,33 @@ class Environment(
 		// TODO work out what the right lock file size should be...? It's 8KB on a 16KB pagesize db
 //        assert(lockFile.fileSize() % pageSize.toInt() == 0L) { "Lock file is not a valid size" }
 
-		byteBufferWithPageSize = ByteBufferWithPageSize(mappedFile, detectedPageSize)
+		metadataPages = metadataPointers
+		mainDbMappedByteBufferWithPageSize = ByteBufferWithPageSize(mappedFile, detectedPageSize)
+	}
 
-		this.metadata = metadata
-		this.stat = Stat(
-			detectedPageSize,
-			metadata.mainDb.depth.toUInt(),
-			metadata.mainDb.branchPages,
-			metadata.mainDb.leafPages,
-			metadata.mainDb.overflowPages,
-			metadata.mainDb.entries
-		)
+	private fun latestMetadataPage(): MetaDataPage64 {
+		return if (metadataPages.first.txnId > metadataPages.second.txnId) metadataPages.first else metadataPages.second
+	}
 
-		val rootPageNumber = metadata.mainDb.rootPageNumber
-		if (rootPageNumber >= 0) { // -1 is an empty db
-			assert(rootPageNumber <= UInt.MAX_VALUE.toLong())
+	fun stat(): Stat {
+		return latestMetadataPage().run {
+			Stat(
+				mainDbMappedByteBufferWithPageSize.pageSize,
+				mainDb.depth.toUInt(),
+				mainDb.branchPages,
+				mainDb.leafPages,
+				mainDb.overflowPages,
+				mainDb.entries
+			)
 		}
 	}
 
-	fun getMainDb(): DB {
-		return metadata.mainDb
+	fun setMaxDatabases() {
+		TODO()
+	}
+
+	fun beginTransaction(): Transaction {
+		return Transaction(latestMetadataPage())
 	}
 
 	override fun close() {
@@ -124,11 +130,11 @@ class Environment(
 	private fun getMetadataPage(
 		buffer: ByteBuffer,
 		testPageSizes: Collection<UInt> = supportedPageSizes
-	): Pair<MetaDataPage64, UInt> {
+	): Pair<Pair<MetaDataPage64, MetaDataPage64>, UInt> {
 		testPageSizes.forEach { testPageSize ->
 			try {
-				val page = getMetadataPageWithPageSize(buffer, testPageSize)
-				return Pair(page, testPageSize)
+				val pages = getMetadataPagesWithPageSize(buffer, testPageSize)
+				return Pair(pages, testPageSize)
 			} catch (e: Throwable) {
 				when (e) {
 					is AssertionError, is Page.UnsupportedPageTypeException -> {
@@ -142,16 +148,17 @@ class Environment(
 		throw UnableToDetectPageSizeException()
 	}
 
-	private fun getMetadataPageWithPageSize(buffer: ByteBuffer, pageSize: UInt): MetaDataPage64 {
+	private fun getMetadataPagesWithPageSize(buffer: ByteBuffer, pageSize: UInt): Pair<MetaDataPage64, MetaDataPage64> {
 		val first = ByteBufferWithPageSize(buffer, pageSize).getPage(0u)
 		assert(first is MetaDataPage64) { "First page is not a metadata page" }
+		assert((first as MetaDataPage64).version == 1u) { "Invalid page version ${first.version}" }
+		assert(first.magic == 0xBEEFC0DE.toUInt()) { "Page does not contain required magic" }
 		val second = ByteBufferWithPageSize(buffer, pageSize).getPage(1u)
 		assert(second is MetaDataPage64) { "Second page is not a metadata page" }
-		val latestMetadataPage = if ((first as MetaDataPage64).txnId > (second as MetaDataPage64).txnId) first else second
-		assert(latestMetadataPage.magic == 0xBEEFC0DE.toUInt()) { "Page does not contain required magic. Instead ${latestMetadataPage.magic}" }
-		assert(latestMetadataPage.version == 1u) { "Invalid page version ${latestMetadataPage.version}" } // Not supporting development version 999
+		assert((second as MetaDataPage64).version == 1u) { "Invalid page version ${second.version}" }
+		assert(second.magic == 0xBEEFC0DE.toUInt()) { "Page does not contain required magic" }
 		logger.trace { "Page size is $pageSize" }
-		return latestMetadataPage
+		return Pair(first, second)
 	}
 
 	/**

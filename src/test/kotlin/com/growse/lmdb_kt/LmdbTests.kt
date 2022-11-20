@@ -9,7 +9,6 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.slf4j.simple.SimpleLogger
 import java.nio.ByteOrder
 import java.nio.file.Paths
-import java.security.MessageDigest
 import java.util.stream.Stream
 import kotlin.io.path.bufferedReader
 import kotlin.streams.asSequence
@@ -39,7 +38,7 @@ class LmdbTests {
 			locking = false,
 			byteOrder = ByteOrder.LITTLE_ENDIAN
 		).use { env ->
-			env.stat.run {
+			env.stat().run {
 				assertEquals(databasePathWithStats.expectedPageSize, pageSize.toInt(), "Page size")
 			}
 		}
@@ -57,7 +56,7 @@ class LmdbTests {
 			byteOrder = ByteOrder.LITTLE_ENDIAN,
 			pageSize = databaseWithStats.expectedPageSize.toUInt()
 		).use { env ->
-			env.stat.run {
+			env.stat().run {
 				assertEquals(databaseWithStats.expectedPageSize, pageSize.toInt(), "Page size")
 				assertEquals(databaseWithStats.expectedTreeDepth, treeDepth.toInt(), "Tree depth")
 				assertEquals(databaseWithStats.expectedBranchPagesCount, branchPagesCount, "Branch pages")
@@ -82,12 +81,14 @@ class LmdbTests {
 			byteOrder = ByteOrder.LITTLE_ENDIAN,
 			pageSize = pageSize.toUInt()
 		).use { env ->
-			env.getMainDb().dump().run {
-				assertEquals(expected.size, size, "Entry count")
-				expected.keys.forEach {
-					assertTrue(keys.contains(String(it)), "Key exists in dump")
-					assertEquals(expected[it]!!.length, this[String(it)]!!.size, "Value size is correct for $it")
-					assertEquals(expected[it]!!.digest, this[String(it)]!!.digest())
+			env.beginTransaction().use { tx ->
+				tx.openDatabase().dump().run {
+					assertEquals(expected.size, size, "Entry count")
+					expected.keys.forEach {
+						assertTrue(keys.contains(String(it)), "Key exists in dump")
+						assertEquals(expected[it]!!.length, this[String(it)]!!.size, "Value size is correct for $it")
+						assertEquals(expected[it]!!.digest, this[String(it)]!!.digest())
+					}
 				}
 			}
 		}
@@ -103,11 +104,13 @@ class LmdbTests {
 			byteOrder = ByteOrder.LITTLE_ENDIAN,
 			pageSize = 4096.toUInt()
 		).use { env ->
-			val value = env.getMainDb().get(key)
-			assert(value.isSuccess)
-			value.getOrThrow().run {
-				assertEquals(7209, size)
-				assertEquals("f161ed45d7744c25a2ffd85c828c0543", digest())
+			env.beginTransaction().use { tx ->
+				val value = tx.openDatabase().get(key)
+				assert(value.isSuccess)
+				value.getOrThrow().run {
+					assertEquals(7209, size)
+					assertEquals("f161ed45d7744c25a2ffd85c828c0543", digest())
+				}
 			}
 		}
 	}
@@ -246,10 +249,3 @@ class LmdbTests {
 			)
 	}
 }
-
-private fun ByteArray.digest(): String = MessageDigest.getInstance("MD5").digest(this).toHex()
-
-/**
- * A helper class that represents a database record value concicsely for test parameters
- */
-data class LengthAndDigest(val length: Int, val digest: String)

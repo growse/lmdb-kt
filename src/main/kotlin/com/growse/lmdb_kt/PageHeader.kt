@@ -29,7 +29,7 @@ import java.util.*
  */
 class PageHeader(buffer: ByteBuffer) {
 	val pageNumber: Long
-	val padding: UShort
+	private val padding: UShort
 	val flags: EnumSet<Page.Flags>
 	val pagesOrRange: Either<UInt, Environment.Range>
 
