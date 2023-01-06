@@ -5,7 +5,7 @@ A library to read/write [lmdb](http://www.lmdb.tech/doc/) databases without rely
 ## TODO
 - [X] Stat
 - [X] Dump
-- [ ] Publish package
+- [X] Publish package
 - [ ] Named databases
 - [ ] Read txns
 - [X] Getting key / values

@@ -33,8 +33,11 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-      - name: Publish package
-        run: ./gradlew publishMavenPublicationToGitHubPackagesRepository
+      - uses: burrunan/gradle-cache-action@v1
+        name: Publish package
+        with:
+          arguments: publishMavenPublicationToGitHubPackagesRepository
+          read-only: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_USERNAME: ${{ env.GITHUB_REPOSITORY_OWNER }}
