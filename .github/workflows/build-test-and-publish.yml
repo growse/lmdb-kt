@@ -37,3 +37,4 @@ jobs:
         run: ./gradlew publishMavenPublicationToGitHubPackagesRepository
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_USERNAME: ${{ env.GITHUB_REPOSITORY_OWNER }}

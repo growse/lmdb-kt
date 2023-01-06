@@ -42,7 +42,7 @@ publishing {
 	publications {
 		create<MavenPublication>("maven") {
 			groupId = group.toString()
-			artifactId = "lmdb-kt"
+			artifactId = "lmdb_kt"
 			version = version
 			from(components["java"])
 		}
