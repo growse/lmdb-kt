@@ -11,25 +11,28 @@ private val logger = KotlinLogging.logger {}
  * @property nodes a list of [LeafNode]
  */
 data class LeafPage(
-	override val buffer: ByteBufferWithPageSize,
+	override val buffer: DbMappedBuffer,
 	override val number: UInt,
 	val pageHeader: PageHeader
 ) : Page {
 	constructor(
 		pageHeader: PageHeader,
-		byteBufferWithPageSize: ByteBufferWithPageSize,
+		dbMappedBuffer: DbMappedBuffer,
 		number: UInt
 	) : this(
-		buffer = byteBufferWithPageSize,
+		buffer = dbMappedBuffer,
 		number = number,
 		pageHeader
 	)
 
-	val nodes = IntRange(1, pageHeader.numKeys())
-		.also { logger.trace { "Leaf page has ${pageHeader.numKeys()} keys" } }
-		.map { buffer.buffer.short }
-		.map {
-			buffer.buffer.position(pageOffset.toInt() + it)
-			LeafNode(buffer.buffer)
+	val nodes: List<LeafNode>
+		get() {
+			buffer.seek(number, PageHeader.SIZE)
+			return IntRange(1, pageHeader.numKeys())
+				.also { logger.trace { "Leaf page has ${pageHeader.numKeys()} keys" } }
+				.map { buffer.readShort().also { logger.trace { "key at $it" } } }
+				.map {
+					LeafNode(buffer, number, it.toUInt())
+				}
 		}
 }

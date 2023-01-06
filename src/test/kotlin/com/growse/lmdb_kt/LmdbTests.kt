@@ -82,7 +82,7 @@ class LmdbTests {
 			pageSize = pageSize.toUInt()
 		).use { env ->
 			env.beginTransaction().use { tx ->
-				tx.openDatabase().dump().run {
+				tx.dump().run {
 					assertEquals(expected.size, size, "Entry count")
 					expected.keys.forEach {
 						assertTrue(keys.contains(String(it)), "Key exists in dump")
@@ -105,7 +105,7 @@ class LmdbTests {
 			pageSize = 4096.toUInt()
 		).use { env ->
 			env.beginTransaction().use { tx ->
-				val value = tx.openDatabase().get(key)
+				val value = tx.get(key.toByteArray())
 				assert(value.isSuccess)
 				value.getOrThrow().run {
 					assertEquals(7209, size)

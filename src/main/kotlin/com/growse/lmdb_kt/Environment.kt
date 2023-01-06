@@ -27,13 +27,16 @@ class Environment(
 	pageSize: UInt? = null,
 	readOnly: Boolean = false,
 	locking: Boolean = true,
-	byteOrder: ByteOrder = ByteOrder.nativeOrder()
+	val byteOrder: ByteOrder = ByteOrder.nativeOrder()
 ) : AutoCloseable {
-	private val fileChannel: FileChannel
-	private val mainDbMappedByteBufferWithPageSize: ByteBufferWithPageSize
+	private var dataFile: Path
+	private var lockFile: Path
+	private var dataFileChannel: FileChannel
+
+	private val mainDbMappedDbMappedBuffer: DbMappedBuffer
 	private val supportedPageSizes = listOf(4u * 1024u, 8u * 1024u, 16u * 1024u)
 
-	private lateinit var metadataPages: Pair<MetaDataPage64, MetaDataPage64>
+	private var metadataPages: Pair<MetaDataPage64, MetaDataPage64>
 
 	/**
 	 * Constructor will detect the page size of the database and extract the metadata page, which can be used to populate
@@ -44,17 +47,18 @@ class Environment(
 		assert(!locking) { "Locking is not currently implemented" }
 		assert(lmdbPath.isDirectory()) { "Supplied path is not a directory" }
 
-		val dataFile = lmdbPath.resolve(DATA_FILENAME)
-		val lockFile = lmdbPath.resolve(LOCK_FILENAME)
+		dataFile = lmdbPath.resolve(DATA_FILENAME)
+		lockFile = lmdbPath.resolve(LOCK_FILENAME)
 		assert(dataFile.isRegularFile()) { "Supplied path does not contain a data file" }
 		if (locking) {
 			assert(lockFile.isRegularFile()) { "Supplied path does not contain a lock file" }
 		}
 
 		logger.trace { "Mapping file $dataFile" }
-		fileChannel = FileChannel.open(dataFile)
+		dataFileChannel = FileChannel.open(dataFile)
+
 		val mappedFile =
-			fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, dataFile.fileSize()).apply { order(byteOrder) }
+			dataFileChannel.map(FileChannel.MapMode.READ_ONLY, 0, dataFile.fileSize()).apply { order(byteOrder) }
 
 		val (metadataPointers, detectedPageSize) = if (pageSize != null) {
 			getMetadataPage(mappedFile, listOf(pageSize))
@@ -63,21 +67,19 @@ class Environment(
 		}
 
 		assert(dataFile.fileSize() % detectedPageSize.toInt() == 0L) { "Data file is not a multiple of the detected page size of $pageSize" }
-		// TODO work out what the right lock file size should be...? It's 8KB on a 16KB pagesize db
-//        assert(lockFile.fileSize() % pageSize.toInt() == 0L) { "Lock file is not a valid size" }
 
 		metadataPages = metadataPointers
-		mainDbMappedByteBufferWithPageSize = ByteBufferWithPageSize(mappedFile, detectedPageSize)
+		mainDbMappedDbMappedBuffer = DbMappedBuffer(mappedFile, detectedPageSize)
 	}
 
-	private fun latestMetadataPage(): MetaDataPage64 {
+	fun latestMetadataPage(): MetaDataPage64 {
 		return if (metadataPages.first.txnId > metadataPages.second.txnId) metadataPages.first else metadataPages.second
 	}
 
 	fun stat(): Stat {
 		return latestMetadataPage().run {
 			Stat(
-				mainDbMappedByteBufferWithPageSize.pageSize,
+				mainDbMappedDbMappedBuffer.pageSize,
 				mainDb.depth.toUInt(),
 				mainDb.branchPages,
 				mainDb.leafPages,
@@ -87,18 +89,14 @@ class Environment(
 		}
 	}
 
-	fun setMaxDatabases() {
-		TODO()
-	}
-
 	fun beginTransaction(): Transaction {
-		return Transaction(latestMetadataPage())
+		return Transaction(this)
 	}
 
 	override fun close() {
 		logger.trace { "Close" }
-		if (fileChannel.isOpen) {
-			fileChannel.close()
+		if (dataFileChannel.isOpen) {
+			dataFileChannel.close()
 		}
 	}
 
@@ -148,12 +146,12 @@ class Environment(
 		throw UnableToDetectPageSizeException()
 	}
 
-	private fun getMetadataPagesWithPageSize(buffer: ByteBuffer, pageSize: UInt): Pair<MetaDataPage64, MetaDataPage64> {
-		val first = ByteBufferWithPageSize(buffer, pageSize).getPage(0u)
+	fun getMetadataPagesWithPageSize(buffer: ByteBuffer, pageSize: UInt): Pair<MetaDataPage64, MetaDataPage64> {
+		val first = DbMappedBuffer(buffer, pageSize).getPage(0u)
 		assert(first is MetaDataPage64) { "First page is not a metadata page" }
 		assert((first as MetaDataPage64).version == 1u) { "Invalid page version ${first.version}" }
 		assert(first.magic == 0xBEEFC0DE.toUInt()) { "Page does not contain required magic" }
-		val second = ByteBufferWithPageSize(buffer, pageSize).getPage(1u)
+		val second = DbMappedBuffer(buffer, pageSize).getPage(1u)
 		assert(second is MetaDataPage64) { "Second page is not a metadata page" }
 		assert((second as MetaDataPage64).version == 1u) { "Invalid page version ${second.version}" }
 		assert(second.magic == 0xBEEFC0DE.toUInt()) { "Page does not contain required magic" }

@@ -23,12 +23,12 @@ import java.util.*
  *  indx_t 	mp_ptrs
  *
  * @constructor
- * Parses the page header, determining whether or not the page is an overflow
+ * Parses the page header, determining whether the page is an overflow
  *
  * @param buffer a [ByteBuffer] for the page
  */
-class PageHeader(buffer: ByteBuffer) {
-	val pageNumber: Long
+class PageHeader(buffer: DbMappedBuffer) {
+	private val pageNumber: Long
 	private val padding: UShort
 	val flags: EnumSet<Page.Flags>
 	val pagesOrRange: Either<UInt, Environment.Range>
@@ -38,13 +38,13 @@ class PageHeader(buffer: ByteBuffer) {
 	}
 
 	init {
-		pageNumber = buffer.long
-		padding = buffer.short.toUShort()
-		flags = flagsFromBuffer(Page.Flags::class.java, buffer, 2u)
+		pageNumber = buffer.readLong()
+		padding = buffer.readUShort()
+		flags = buffer.flags(Page.Flags::class.java, 2u)
 		pagesOrRange = if (flags.contains(Page.Flags.OVERFLOW)) {
-			Either.Left(buffer.int.toUInt())
+			Either.Left(buffer.readUInt())
 		} else {
-			Either.Right(Environment.Range(buffer.short.toUShort(), buffer.short.toUShort()))
+			Either.Right(Environment.Range(buffer.readUShort(), buffer.readUShort()))
 		}
 	}
 

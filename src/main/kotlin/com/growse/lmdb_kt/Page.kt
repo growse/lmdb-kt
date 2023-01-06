@@ -1,37 +1,39 @@
 package com.growse.lmdb_kt
 
 import mu.KotlinLogging
+import java.nio.ByteBuffer
 import java.util.*
 
 private val logger = KotlinLogging.logger {}
 
 interface Page {
-	val buffer: ByteBufferWithPageSize
+	val buffer: DbMappedBuffer
 	val number: UInt
-	val pageOffset: UInt
-		get() = number * buffer.pageSize
 
 	/**
-	 * Dumps the keys/values from a specific page. Walks through to child pages
+	 * Dumps the keys/values from this page. Walks through to child pages. Copies data from the buffer.
 	 *
-	 * @param page the page to dump data for
 	 * @return a map of keys/values
 	 */
 	fun dump(): Map<String, ByteArray> {
-		buffer.buffer.position((number * buffer.pageSize).toInt())
+		buffer.seek(number, 0u)
 		when (this) {
 			is LeafPage -> {
 				return nodes.associate { leafNode ->
 					when (leafNode.value) {
+						// It's an in-line value
 						is Either.Left -> {
-							String(leafNode.key) to (leafNode.value as Either.Left<ByteArray, Long>).left
+							String(ByteArray(leafNode.key.capacity()).apply(leafNode.key::get)) to ByteArray(leafNode.valueSize.toInt()).apply(
+								(leafNode.value as Either.Left<ByteBuffer, *>).left::get
+							)
 						}
 
 						// It's an overflow value
 						is Either.Right -> {
-							val overflowPage = buffer.getPage((leafNode.value as Either.Right<ByteArray, Long>).right.toUInt())
+							val overflowPage =
+								buffer.getPage((leafNode.value as Either.Right<ByteBuffer, Long>).right.toUInt())
 							assert(overflowPage is OverflowPage)
-							String(leafNode.key) to (overflowPage as OverflowPage).getValue(leafNode.valueSize)
+							String(leafNode.keyBytes()) to (overflowPage as OverflowPage).getValue(leafNode.valueSize)
 						}
 					}
 				}
@@ -48,26 +50,19 @@ interface Page {
 		}
 	}
 
-	fun get(key: String): Result<ByteArray> {
-		logger.trace { "Looking for $key on page $number" }
-		buffer.buffer.position((number * buffer.pageSize).toInt())
+	fun get(key: ByteArray): Result<ByteArray> {
+		logger.trace { "Looking for ${key.toHex()} on page $number" }
+		buffer.seek(number, 0u)
 		return when (this) {
 			is LeafPage -> {
-				val leafNode = nodes.first { it.key.contentEquals(key.toByteArray()) }
+				val leafNode = nodes.first { it.keyBytes().contentEquals(key) }
 				logger.trace { "Found it in a leaf node: $leafNode" }
-				when (leafNode.value) {
-					is Either.Left -> Result.success((leafNode.value as Either.Left<ByteArray, Long>).left)
-					is Either.Right -> {
-						val overflowPage = buffer.getPage((leafNode.value as Either.Right<ByteArray, Long>).right.toUInt())
-						assert(overflowPage is OverflowPage)
-						Result.success((overflowPage as OverflowPage).getValue(leafNode.valueSize))
-					}
-				}
+				Result.success(leafNode.valueBytes())
 			}
 
 			is BranchPage -> {
 				nodes
-					.last { it.key.compareWith(key.toByteArray()) < 0 }
+					.last { it.keyBytes().compareWith(key) < 0 }
 					.also { logger.trace { "Found it in a branch node. Going to child page: ${it.childPage}" } }.childPage
 					.run(buffer::getPage)
 					.get(key)

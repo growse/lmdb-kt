@@ -18,7 +18,7 @@ private val logger = KotlinLogging.logger {}
  *  pgno_t 	    md_root
  */
 data class DB(
-	private val buffer: ByteBufferWithPageSize,
+	val buffer: DbMappedBuffer,
 	val pad: Int,
 	val flags: EnumSet<Flags>,
 	val depth: Short,
@@ -28,39 +28,17 @@ data class DB(
 	val entries: Long,
 	val rootPageNumber: Long
 ) {
-	constructor(buffer: ByteBufferWithPageSize) : this(
+	constructor(buffer: DbMappedBuffer) : this(
 		buffer = buffer,
-		pad = buffer.buffer.int,
-		flags = flagsFromBuffer(Flags::class.java, buffer.buffer, 2u),
-		depth = buffer.buffer.short,
-		branchPages = buffer.buffer.long,
-		leafPages = buffer.buffer.long,
-		overflowPages = buffer.buffer.long,
-		entries = buffer.buffer.long,
-		rootPageNumber = buffer.buffer.long
+		pad = buffer.readInt(),
+		flags = buffer.flags(Flags::class.java, 2u),
+		depth = buffer.readShort(),
+		branchPages = buffer.readLong(),
+		leafPages = buffer.readLong(),
+		overflowPages = buffer.readLong(),
+		entries = buffer.readLong(),
+		rootPageNumber = buffer.readLong()
 	)
-
-	/**
-	 * Dumps all keys/values out
-	 *
-	 * @return a map of keys (as strings) and values
-	 */
-	fun dump(): Map<String, ByteArray> {
-		logger.debug { "Dump database" }
-		if (rootPageNumber == -1L) {
-			return emptyMap()
-		}
-		return buffer.getPage(rootPageNumber.toUInt()).dump()
-	}
-
-	fun get(key: String): Result<ByteArray> {
-		logger.debug { "Get key $key from database" }
-		return if (rootPageNumber == -1L) {
-			Result.failure(Exception("Key not found"))
-		} else {
-			buffer.getPage(rootPageNumber.toUInt()).get(key)
-		}
-	}
 
 	/**
 	 * Database flags

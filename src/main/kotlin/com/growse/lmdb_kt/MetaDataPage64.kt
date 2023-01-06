@@ -11,7 +11,7 @@ package com.growse.lmdb_kt
  * volatile txnid_t 	mm_txnid
  */
 data class MetaDataPage64(
-	override val buffer: ByteBufferWithPageSize,
+	override val buffer: DbMappedBuffer,
 	override val number: UInt,
 	val magic: UInt,
 	val version: UInt,
@@ -22,16 +22,16 @@ data class MetaDataPage64(
 	val lastPage: ULong,
 	val txnId: ULong
 ) : Page {
-	constructor(byteBufferWithPageSize: ByteBufferWithPageSize, number: UInt) : this(
-		buffer = byteBufferWithPageSize,
+	constructor(dbMappedBuffer: DbMappedBuffer, number: UInt) : this(
+		buffer = dbMappedBuffer,
 		number = number,
-		magic = byteBufferWithPageSize.buffer.int.toUInt(),
-		version = byteBufferWithPageSize.buffer.int.toUInt(),
-		address = byteBufferWithPageSize.buffer.long.toULong(),
-		mapSize = byteBufferWithPageSize.buffer.long.toULong(),
-		freeDb = DB(byteBufferWithPageSize),
-		mainDb = DB(byteBufferWithPageSize),
-		lastPage = byteBufferWithPageSize.buffer.long.toULong(),
-		txnId = byteBufferWithPageSize.buffer.long.toULong()
+		magic = dbMappedBuffer.readUInt(),
+		version = dbMappedBuffer.readUInt(),
+		address = dbMappedBuffer.readULong(),
+		mapSize = dbMappedBuffer.readULong(),
+		freeDb = DB(dbMappedBuffer),
+		mainDb = DB(dbMappedBuffer),
+		lastPage = dbMappedBuffer.readULong(),
+		txnId = dbMappedBuffer.readULong()
 	)
 }

@@ -17,31 +17,42 @@ private val logger = KotlinLogging.logger {}
  * @param buffer a [ByteBuffer] that contains the Node
  */
 data class LeafNode(
-	private val buffer: ByteBuffer
-) : Node {
-	private val position = buffer.position()
-	private val lo: UShort = buffer.short.toUShort()
-	private val hi: UShort = buffer.short.toUShort()
-	private val flags: EnumSet<Node.Flags> = flagsFromBuffer(Node.Flags::class.java, buffer, 2u)
-	private val keySize: UShort = buffer.short.toUShort()
-	val key: ByteArray = ByteArray(keySize.toInt()).apply(buffer::get)
+	private val buffer: DbMappedBuffer,
+	private val pageNumber: UInt,
+	private val addressInPage: UInt
+) : Node(buffer, pageNumber, addressInPage) {
+	private val valueIndex = 8u + keySize
 	val valueSize: UInt = lo + (hi.toUInt().shl(16))
 
-	val value: Either<ByteArray, Long> // The value is either a bytearray or a reference to an overflow page
+	val value: Either<ByteBuffer, Long> // The value is either a bytearray or a reference to an overflow page
 		by lazy {
-			buffer.position(position + 8 + keySize.toInt())
-			if (flags.contains(Node.Flags.BIGDATA)) {
-				Either.Right(buffer.long.also { logger.trace { "Value is bigdata at page $it" } })
+			if (flags.contains(Flags.BIGDATA)) {
+				buffer.seek(pageNumber, valueIndex + addressInPage)
+				Either.Right(buffer.readLong().also { logger.trace { "Value is bigdata at page $it" } })
 			} else {
+				buffer.seek(pageNumber, valueIndex + addressInPage)
 				Either.Left(
-					ByteArray(valueSize.toInt())
-						.apply(buffer::get)
-						.also { logger.trace { "Value is $valueSize bytes (${it.toHex()} or ${it.toAscii()})" } }
+					buffer.slice(pageNumber, addressInPage.toInt() + 8 + keySize.toInt(), valueSize.toInt())
 				)
 			}
 		}
 
+	fun valueBytes(): ByteArray {
+		return when (value) {
+			is Either.Left -> ByteArray(valueSize.toInt()).apply {
+				buffer.seek(pageNumber, addressInPage)
+				(value as Either.Left<ByteBuffer, Long>).left.get(this)
+			}
+
+			is Either.Right -> (
+				buffer
+					.getPage((value as Either.Right<ByteBuffer, Long>).right.toUInt())
+					.also { assert(it is OverflowPage) } as OverflowPage
+				).getValue(valueSize)
+		}
+	}
+
 	override fun toString(): String {
-		return "LeafNode(position=$position)"
+		return "LeafNode(page=$pageNumber, addressInPage=$addressInPage)"
 	}
 }

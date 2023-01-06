@@ -4,16 +4,44 @@ import mu.KotlinLogging
 
 private val logger = KotlinLogging.logger {}
 
-class Transaction(private val metadata: MetaDataPage64) : AutoCloseable {
-	fun openDatabase(name: String = "0"): DB {
+class Transaction(private val env: Environment, private val databaseName: String = "0") : AutoCloseable {
+	private lateinit var database: DB
+
+	init {
+		database = openDatabase(databaseName)
+	}
+
+	private fun openDatabase(name: String = "0"): DB {
 		if (name == "0") {
-			return metadata.mainDb
+			return env.latestMetadataPage().mainDb.also { database = it }
 		} else {
 			TODO("Named databases not supported yet")
 		}
 	}
 
+	fun get(key: ByteArray): Result<ByteArray> {
+		logger.debug { "Get key ${key.toHex()} from database" }
+		return if (database.rootPageNumber == -1L) {
+			Result.failure(Exception("Key not found"))
+		} else {
+			database.buffer.getPage(database.rootPageNumber.toUInt()).get(key)
+		}
+	}
+
+	/**
+	 * Dumps all keys/values out
+	 *
+	 * @return a map of keys (as strings) and values
+	 */
+	fun dump(): Map<String, ByteArray> {
+		logger.debug { "Dump database" }
+		if (database.rootPageNumber == -1L) {
+			return emptyMap()
+		}
+		return database.buffer.getPage(database.rootPageNumber.toUInt()).dump()
+	}
+
 	override fun close() {
-		logger.trace { "Close" }
+		logger.trace { "Close. Noop" }
 	}
 }
