@@ -5,7 +5,7 @@ import mu.KotlinLogging
 private val logger = KotlinLogging.logger {}
 
 class Transaction(private val env: Environment, private val databaseName: String = "0") : AutoCloseable {
-	private lateinit var database: DB
+	private var database: DB
 
 	init {
 		database = openDatabase(databaseName)
