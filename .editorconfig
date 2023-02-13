@@ -10,3 +10,4 @@ ij_kotlin_wrap_first_method_in_call_chain = true
 ij_kotlin_method_call_chain_wrap = on_every_item
 ij_kotlin_continuation_indent_for_chained_calls = true
 ij_kotlin_enum_constants_wrap = split_into_lines
+ij_kotlin_package_name = false
