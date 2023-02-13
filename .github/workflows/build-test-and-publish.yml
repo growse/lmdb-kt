@@ -5,6 +5,9 @@ name: Build, test and publish to GH packages
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   build-and-test:
@@ -22,6 +25,7 @@ jobs:
           arguments: test
   publish:
     name: Publish
+    if: github.event_name != 'pull_request'
     permissions:
       contents: read
       packages: write
