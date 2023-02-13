@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-	kotlin("jvm") version "1.7.20"
+	kotlin("jvm") version "1.8.10"
 	id("maven-publish")
 	id("com.adarshr.test-logger") version ("3.2.0")
 }
