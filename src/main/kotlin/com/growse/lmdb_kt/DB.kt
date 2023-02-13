@@ -1,21 +1,11 @@
 package com.growse.lmdb_kt
 
-import mu.KotlinLogging
 import java.util.*
 
-private val logger = KotlinLogging.logger {}
-
 /**
- * Represents a single database
- * http://www.lmdb.tech/doc/group__internal.html#structMDB__db
- *  uint32_t 	md_pad
- *  uint16_t 	md_flags
- *  uint16_t 	md_depth
- *  pgno_t 	    md_branch_pages
- *  pgno_t 	    md_leaf_pages
- *  pgno_t 	    md_overflow_pages
- *  size_t 	    md_entries
- *  pgno_t 	    md_root
+ * Represents a single database http://www.lmdb.tech/doc/group__internal.html#structMDB__db uint32_t
+ * md_pad uint16_t md_flags uint16_t md_depth pgno_t md_branch_pages pgno_t md_leaf_pages pgno_t
+ * md_overflow_pages size_t md_entries pgno_t md_root
  */
 data class DB(
 	val buffer: DbMappedBuffer,
@@ -26,9 +16,11 @@ data class DB(
 	val leafPages: Long,
 	val overflowPages: Long,
 	val entries: Long,
-	val rootPageNumber: Long
+	val rootPageNumber: Long,
 ) {
-	constructor(buffer: DbMappedBuffer) : this(
+	constructor(
+		buffer: DbMappedBuffer,
+	) : this(
 		buffer = buffer,
 		pad = buffer.readInt(),
 		flags = buffer.flags(Flags::class.java, 2u),
@@ -37,13 +29,10 @@ data class DB(
 		leafPages = buffer.readLong(),
 		overflowPages = buffer.readLong(),
 		entries = buffer.readLong(),
-		rootPageNumber = buffer.readLong()
+		rootPageNumber = buffer.readLong(),
 	)
 
-	/**
-	 * Database flags
-	 * http://www.lmdb.tech/doc/group__mdb__dbi__open.html
-	 */
+	/** Database flags http://www.lmdb.tech/doc/group__mdb__dbi__open.html */
 	enum class Flags(val _idx: Int) {
 		REVERSEKEY(0),
 		DUPSORT(1),
@@ -51,6 +40,6 @@ data class DB(
 		DUPFIXED(3),
 		INTEGERDUP(4),
 		REVERSEDUP(5),
-		CREATE(14)
+		CREATE(14),
 	}
 }

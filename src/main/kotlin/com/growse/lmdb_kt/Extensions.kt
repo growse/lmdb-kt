@@ -6,7 +6,9 @@ internal fun Buffer.seek(offset: Int) {
 	this.position(this.position() + offset)
 }
 
-internal fun ByteArray.toHex(): String = joinToString(separator = "") { eachByte -> "%02x".format(eachByte) }
+internal fun ByteArray.toHex(): String =
+	joinToString(separator = "") { eachByte -> "%02x".format(eachByte) }
+
 internal fun ByteArray.toAscii(): String = String(this)
 
 internal fun ByteArray.compareWith(byteArray: ByteArray): Int {

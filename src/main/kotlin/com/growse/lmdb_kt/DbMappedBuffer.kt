@@ -7,9 +7,10 @@ import java.util.*
 private val logger = KotlinLogging.logger {}
 
 /**
- * A DbMappedBuffer is a mapped buffer that represents a [DB]. The [ByteBuffer] given should represent the whole [DB]
- * structure, and the given pagesize parameter lets it navigate and extract different pages. It also implements some of
- * the commonly used [ByteBuffer] methods, passing them onto the underlying buffer.
+ * A DbMappedBuffer is a mapped buffer that represents a [DB]. The [ByteBuffer] given should
+ * represent the whole [DB] structure, and the given pagesize parameter lets it navigate and extract
+ * different pages. It also implements some of the commonly used [ByteBuffer] methods, passing them
+ * onto the underlying buffer.
  */
 data class DbMappedBuffer(private val buffer: ByteBuffer, internal val pageSize: UInt) {
 
@@ -106,7 +107,7 @@ data class DbMappedBuffer(private val buffer: ByteBuffer, internal val pageSize:
 				addAll(
 					IntRange(0, bitset.size()).flatMap {
 						if (bitset[it]) listOf(constants[it]) else emptyList()
-					}
+					},
 				)
 			}
 		}

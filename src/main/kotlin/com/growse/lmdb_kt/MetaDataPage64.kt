@@ -1,14 +1,9 @@
 package com.growse.lmdb_kt
 
 /**
- * MDB_meta
- * uint32_t 	        mm_magic
- * uint32_t 	        mm_version
- * void * 	            mm_address
- * size_t 	            mm_mapsize
- * MDB_db 	            mm_dbs [CORE_DBS] (CORE_DBS   2 - Number of DBs in metapage (free and main) - also hardcoded elsewhere)
- * pgno_t 	            mm_last_pg
- * volatile txnid_t 	mm_txnid
+ * MDB_meta uint32_t mm_magic uint32_t mm_version void * mm_address size_t mm_mapsize MDB_db mm_dbs
+ * [CORE_DBS] (CORE_DBS 2 - Number of DBs in metapage (free and main) - also hardcoded elsewhere)
+ * pgno_t mm_last_pg volatile txnid_t mm_txnid
  */
 data class MetaDataPage64(
 	override val buffer: DbMappedBuffer,
@@ -20,9 +15,12 @@ data class MetaDataPage64(
 	val freeDb: DB,
 	val mainDb: DB,
 	val lastPage: ULong,
-	val txnId: ULong
+	val txnId: ULong,
 ) : Page {
-	constructor(dbMappedBuffer: DbMappedBuffer, number: UInt) : this(
+	constructor(
+		dbMappedBuffer: DbMappedBuffer,
+		number: UInt,
+	) : this(
 		buffer = dbMappedBuffer,
 		number = number,
 		magic = dbMappedBuffer.readUInt(),
@@ -32,6 +30,6 @@ data class MetaDataPage64(
 		freeDb = DB(dbMappedBuffer),
 		mainDb = DB(dbMappedBuffer),
 		lastPage = dbMappedBuffer.readULong(),
-		txnId = dbMappedBuffer.readULong()
+		txnId = dbMappedBuffer.readULong(),
 	)
 }

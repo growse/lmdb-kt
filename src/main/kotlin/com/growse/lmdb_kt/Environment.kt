@@ -16,18 +16,18 @@ private val logger = KotlinLogging.logger {}
 /**
  * LMDB Environment. Represents a directory on disk containing one or more databases.
  *
- * @constructor
- * Detects the page size of the database and extract the metadata page, which can be used to populate the [Stat] structure
- *
  * @param lmdbPath path to the LMDB directory on disk
- * @param pageSize optionally specify the page size to use. If not specified, auto-detection is attempted
+ * @param pageSize optionally specify the page size to use. If not specified, auto-detection is
+ *   attempted
+ * @constructor Detects the page size of the database and extract the metadata page, which can be
+ *   used to populate the [Stat] structure
  */
 class Environment(
 	lmdbPath: Path,
 	pageSize: UInt? = null,
 	readOnly: Boolean = false,
 	locking: Boolean = true,
-	val byteOrder: ByteOrder = ByteOrder.nativeOrder()
+	val byteOrder: ByteOrder = ByteOrder.nativeOrder(),
 ) : AutoCloseable {
 	private var dataFile: Path
 	private var lockFile: Path
@@ -39,8 +39,8 @@ class Environment(
 	private var metadataPages: Pair<MetaDataPage64, MetaDataPage64>
 
 	/**
-	 * Constructor will detect the page size of the database and extract the metadata page, which can be used to populate
-	 * the [Stat] structure
+	 * Constructor will detect the page size of the database and extract the metadata page, which can
+	 * be used to populate the [Stat] structure
 	 */
 	init {
 		assert(readOnly) { "Writes are not currently implemented" }
@@ -58,22 +58,31 @@ class Environment(
 		dataFileChannel = FileChannel.open(dataFile)
 
 		val mappedFile =
-			dataFileChannel.map(FileChannel.MapMode.READ_ONLY, 0, dataFile.fileSize()).apply { order(byteOrder) }
+			dataFileChannel.map(FileChannel.MapMode.READ_ONLY, 0, dataFile.fileSize()).apply {
+				order(byteOrder)
+			}
 
-		val (metadataPointers, detectedPageSize) = if (pageSize != null) {
-			getMetadataPage(mappedFile, listOf(pageSize))
-		} else {
-			getMetadataPage(mappedFile)
+		val (metadataPointers, detectedPageSize) =
+			if (pageSize != null) {
+				getMetadataPage(mappedFile, listOf(pageSize))
+			} else {
+				getMetadataPage(mappedFile)
+			}
+
+		assert(dataFile.fileSize() % detectedPageSize.toInt() == 0L) {
+			"Data file is not a multiple of the detected page size of $pageSize"
 		}
-
-		assert(dataFile.fileSize() % detectedPageSize.toInt() == 0L) { "Data file is not a multiple of the detected page size of $pageSize" }
 
 		metadataPages = metadataPointers
 		mainDbMappedDbMappedBuffer = DbMappedBuffer(mappedFile, detectedPageSize)
 	}
 
 	fun latestMetadataPage(): MetaDataPage64 {
-		return if (metadataPages.first.txnId > metadataPages.second.txnId) metadataPages.first else metadataPages.second
+		return if (metadataPages.first.txnId > metadataPages.second.txnId) {
+			metadataPages.first
+		} else {
+			metadataPages.second
+		}
 	}
 
 	fun stat(): Stat {
@@ -84,7 +93,7 @@ class Environment(
 				mainDb.branchPages,
 				mainDb.leafPages,
 				mainDb.overflowPages,
-				mainDb.entries
+				mainDb.entries,
 			)
 		}
 	}
@@ -101,14 +110,9 @@ class Environment(
 	}
 
 	/**
-	 * struct MDB_stat
-	 * Statistics for a database in the environment.
-	 * unsigned int 	ms_psize
-	 * unsigned int 	ms_depth
-	 * size_t 	ms_branch_pages
-	 * size_t 	ms_leaf_pages
-	 * size_t 	ms_overflow_pages
-	 * size_t 	ms_entries
+	 * struct MDB_stat Statistics for a database in the environment. unsigned int ms_psize unsigned
+	 * int ms_depth size_t ms_branch_pages size_t ms_leaf_pages size_t ms_overflow_pages size_t
+	 * ms_entries
 	 */
 	data class Stat(
 		val pageSize: UInt,
@@ -116,18 +120,20 @@ class Environment(
 		val branchPagesCount: Long,
 		val leafPagesCount: Long,
 		val overflowPagesCount: Long,
-		val entriesCount: Long
+		val entriesCount: Long,
 	)
 
 	/**
-	 * Gets the metadata page. Also tries to detect and return the current page size (because that's a function of whatever
-	 * _SC_PAGESIZE happens to be on the system generating the database. Often it's 4KB, sometimes 16KB)
+	 * Gets the metadata page. Also tries to detect and return the current page size (because that's a
+	 * function of whatever _SC_PAGESIZE happens to be on the system generating the database. Often
+	 * it's 4KB, sometimes 16KB)
+	 *
 	 * @param testPageSizes a list of page sizes to try
 	 * @return the parsed metadatapage and the detected pageSize
 	 */
 	private fun getMetadataPage(
 		buffer: ByteBuffer,
-		testPageSizes: Collection<UInt> = supportedPageSizes
+		testPageSizes: Collection<UInt> = supportedPageSizes,
 	): Pair<Pair<MetaDataPage64, MetaDataPage64>, UInt> {
 		testPageSizes.forEach { testPageSize ->
 			try {
@@ -135,10 +141,11 @@ class Environment(
 				return Pair(pages, testPageSize)
 			} catch (e: Throwable) {
 				when (e) {
-					is AssertionError, is Page.UnsupportedPageTypeException -> {
+					is AssertionError,
+					is Page.UnsupportedPageTypeException,
+					-> {
 						logger.debug { "Page size is not $testPageSize" }
 					}
-
 					else -> throw e
 				}
 			}
@@ -146,7 +153,10 @@ class Environment(
 		throw UnableToDetectPageSizeException()
 	}
 
-	fun getMetadataPagesWithPageSize(buffer: ByteBuffer, pageSize: UInt): Pair<MetaDataPage64, MetaDataPage64> {
+	fun getMetadataPagesWithPageSize(
+		buffer: ByteBuffer,
+		pageSize: UInt,
+	): Pair<MetaDataPage64, MetaDataPage64> {
 		val first = DbMappedBuffer(buffer, pageSize).getPage(0u)
 		assert(first is MetaDataPage64) { "First page is not a metadata page" }
 		assert((first as MetaDataPage64).version == 1u) { "Invalid page version ${first.version}" }
@@ -165,10 +175,7 @@ class Environment(
 	 * @property lower
 	 * @property upper
 	 */
-	data class Range(
-		val lower: UShort,
-		val upper: UShort
-	)
+	data class Range(val lower: UShort, val upper: UShort)
 
 	companion object {
 		private const val DATA_FILENAME = "data.mdb"

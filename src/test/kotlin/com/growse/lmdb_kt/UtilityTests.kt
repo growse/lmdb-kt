@@ -5,9 +5,9 @@ import kotlin.random.Random
 import kotlin.test.assertEquals
 
 class UtilityTests {
-	val random = Random(1)
-	val b1 = ByteArray(50).run(random::nextBytes)
-	val b2 = ByteArray(85).run(random::nextBytes)
+	private val random = Random(1)
+	private val b1 = ByteArray(50).run(random::nextBytes)
+	private val b2 = ByteArray(85).run(random::nextBytes)
 
 	@Test
 	fun `given two bytearrays that are the same, when comparing them then the result is 0`() {

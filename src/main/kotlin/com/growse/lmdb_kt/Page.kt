@@ -11,7 +11,8 @@ interface Page {
 	val number: UInt
 
 	/**
-	 * Dumps the keys/values from this page. Walks through to child pages. Copies data from the buffer.
+	 * Dumps the keys/values from this page. Walks through to child pages. Copies data from the
+	 * buffer.
 	 *
 	 * @return a map of keys/values
 	 */
@@ -23,9 +24,9 @@ interface Page {
 					when (leafNode.value) {
 						// It's an in-line value
 						is Either.Left -> {
-							String(ByteArray(leafNode.key.capacity()).apply(leafNode.key::get)) to ByteArray(leafNode.valueSize.toInt()).apply(
-								(leafNode.value as Either.Left<ByteBuffer, *>).left::get
-							)
+							String(ByteArray(leafNode.key.capacity()).apply(leafNode.key::get)) to
+								ByteArray(leafNode.valueSize.toInt())
+									.apply((leafNode.value as Either.Left<ByteBuffer, *>).left::get)
 						}
 
 						// It's an overflow value
@@ -33,19 +34,20 @@ interface Page {
 							val overflowPage =
 								buffer.getPage((leafNode.value as Either.Right<ByteBuffer, Long>).right.toUInt())
 							assert(overflowPage is OverflowPage)
-							String(leafNode.keyBytes()) to (overflowPage as OverflowPage).getValue(leafNode.valueSize)
+							String(leafNode.keyBytes()) to
+								(overflowPage as OverflowPage).getValue(leafNode.valueSize)
 						}
 					}
 				}
 			}
-
 			is BranchPage -> {
-				return nodes.map { nodeAddress ->
-					logger.trace { "Branch node points to page at ${nodeAddress.childPage}" }
-					buffer.getPage(nodeAddress.childPage).dump()
-				}.fold(mutableMapOf()) { acc, map -> acc.apply { putAll(map) } }
+				return nodes
+					.map { nodeAddress ->
+						logger.trace { "Branch node points to page at ${nodeAddress.childPage}" }
+						buffer.getPage(nodeAddress.childPage).dump()
+					}
+					.fold(mutableMapOf()) { acc, map -> acc.apply { putAll(map) } }
 			}
-
 			else -> TODO("Not implemented")
 		}
 	}
@@ -59,25 +61,23 @@ interface Page {
 				logger.trace { "Found it in a leaf node: $leafNode" }
 				Result.success(leafNode.valueBytes())
 			}
-
 			is BranchPage -> {
 				nodes
 					.last { it.keyBytes().compareWith(key) < 0 }
-					.also { logger.trace { "Found it in a branch node. Going to child page: ${it.childPage}" } }.childPage
+					.also {
+						logger.trace { "Found it in a branch node. Going to child page: ${it.childPage}" }
+					}
+					.childPage
 					.run(buffer::getPage)
 					.get(key)
 			}
-
 			else -> {
 				Result.failure(Exception("Root page is not a leaf or branch page"))
 			}
 		}
 	}
 
-	/**
-	 * Page flags
-	 * http://www.lmdb.tech/doc/group__mdb__page.html
-	 */
+	/** Page flags http://www.lmdb.tech/doc/group__mdb__page.html */
 	enum class Flags(val _idx: Int) {
 		BRANCH(0),
 		LEAF(1),
@@ -87,7 +87,7 @@ interface Page {
 		LEAF2(5),
 		SUBP(6),
 		LOOSE(14),
-		KEEP(15)
+		KEEP(15),
 	}
 
 	class UnsupportedPageTypeException(private val flags: EnumSet<Flags>) : Throwable() {

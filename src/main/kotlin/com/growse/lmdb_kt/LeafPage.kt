@@ -13,17 +13,13 @@ private val logger = KotlinLogging.logger {}
 data class LeafPage(
 	override val buffer: DbMappedBuffer,
 	override val number: UInt,
-	val pageHeader: PageHeader
+	val pageHeader: PageHeader,
 ) : Page {
 	constructor(
 		pageHeader: PageHeader,
 		dbMappedBuffer: DbMappedBuffer,
-		number: UInt
-	) : this(
-		buffer = dbMappedBuffer,
-		number = number,
-		pageHeader
-	)
+		number: UInt,
+	) : this(buffer = dbMappedBuffer, number = number, pageHeader)
 
 	val nodes: List<LeafNode>
 		get() {
@@ -31,8 +27,6 @@ data class LeafPage(
 			return IntRange(1, pageHeader.numKeys())
 				.also { logger.trace { "Leaf page has ${pageHeader.numKeys()} keys" } }
 				.map { buffer.readShort().also { logger.trace { "key at $it" } } }
-				.map {
-					LeafNode(buffer, number, it.toUInt())
-				}
+				.map { LeafNode(buffer, number, it.toUInt()) }
 		}
 }
