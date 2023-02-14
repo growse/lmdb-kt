@@ -1,5 +1,5 @@
 ---
-name: Build, test and publish to GH packages
+name: Build, test and publish
 
 "on":
   push:
