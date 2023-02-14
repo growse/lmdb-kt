@@ -37,8 +37,16 @@ java {
 publishing {
 	repositories {
 		maven {
-			name = "SonarOSS"
-			url = uri("https://maven.pkg.github.com/growse/lmdb-kt")
+			name = "Sonatype OSSRH"
+			val releasesRepoUrl = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
+			val snapshotsRepoUrl = uri("https://s01.oss.sonatype.org/content/repositories/snapshots/")
+			url = if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl
+			val sonaUserName: String? by project
+			val sonaPassword: String? by project
+			credentials {
+				username = sonaUserName
+				password = sonaPassword
+			}
 		}
 		maven {
 			// change URLs to point to your repos, e.g. http://my.org/repo
@@ -50,7 +58,7 @@ publishing {
 	publications {
 		create<MavenPublication>("maven") {
 			groupId = group.toString()
-			artifactId = "lmdb_kt"
+			artifactId = "lmdb-kt"
 			version = version
 			from(components["java"])
 			pom {
@@ -72,7 +80,6 @@ publishing {
 		}
 	}
 }
-
 
 signing {
 	val signingKey: String? by project

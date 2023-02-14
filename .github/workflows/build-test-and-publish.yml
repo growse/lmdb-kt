@@ -40,8 +40,12 @@ jobs:
       - uses: burrunan/gradle-cache-action@v1
         name: Publish package
         with:
-          arguments: publishMavenPublicationToGitHubPackagesRepository
+          arguments: publishMavenPublicationToSonarOSSRepository
           read-only: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_USERNAME: ${{ env.GITHUB_REPOSITORY_OWNER }}
+          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.GPG_SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_SIGNING_PASSWORD }}
+          ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.SONATYPE_PASSWORD }}
+          ORG_GRADLE_PROJECT_sonatypeUserName: growse
