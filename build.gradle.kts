@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
 	kotlin("jvm") version "1.8.10"
 	id("maven-publish")
+	signing
 	id("com.adarshr.test-logger") version ("3.2.0")
 }
 
@@ -28,15 +29,22 @@ tasks.withType<KotlinCompile> {
 	kotlinOptions.jvmTarget = "17"
 }
 
+java {
+	withSourcesJar()
+	withJavadocJar()
+}
+
 publishing {
 	repositories {
 		maven {
-			name = "GitHubPackages"
+			name = "SonarOSS"
 			url = uri("https://maven.pkg.github.com/growse/lmdb-kt")
-			credentials {
-				username = System.getenv("GITHUB_USERNAME")
-				password = System.getenv("GITHUB_TOKEN")
-			}
+		}
+		maven {
+			// change URLs to point to your repos, e.g. http://my.org/repo
+			val releasesRepoUrl = uri(layout.buildDirectory.dir("repos/releases"))
+			val snapshotsRepoUrl = uri(layout.buildDirectory.dir("repos/snapshots"))
+			url = if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl
 		}
 	}
 	publications {
@@ -45,6 +53,30 @@ publishing {
 			artifactId = "lmdb_kt"
 			version = version
 			from(components["java"])
+			pom {
+				name.set("LMDB-kt")
+				description.set("A pure-kotlin/JVM LMDB library")
+				url.set("https://github.com/growse/lmdb-kt")
+				licenses {
+					license {
+						name.set("The MIT License")
+						url.set("https://opensource.org/licenses/MIT")
+					}
+				}
+				scm {
+					connection.set("scm:git:git://github.com/growse/lmdb-kt.git")
+					developerConnection.set("scm:git:ssh://git@github.com:growse/lmdb-kt.git")
+					url.set("https://github.com/growse/lmdb-kt")
+				}
+			}
 		}
 	}
+}
+
+
+signing {
+	val signingKey: String? by project
+	val signingPassword: String? by project
+	useInMemoryPgpKeys(signingKey, signingPassword)
+	sign(publishing.publications["maven"])
 }
