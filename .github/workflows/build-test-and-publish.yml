@@ -40,7 +40,7 @@ jobs:
       - uses: burrunan/gradle-cache-action@v1
         name: Publish package
         with:
-          arguments: publishMavenPublicationToSonarOSSRepository
+          arguments: publishMavenPublicationToSonatypeOSSRHRepository
           read-only: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
