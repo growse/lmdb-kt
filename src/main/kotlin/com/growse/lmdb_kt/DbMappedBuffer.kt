@@ -40,17 +40,14 @@ data class DbMappedBuffer(private val buffer: ByteBuffer, internal val pageSize:
 	}
 
 	/**
-	 * Position the buffer cursor relative to its current position
+	 * Position the buffer cursor to a given page and offset within that page
 	 *
-	 * @param offset relative to current to move by
+	 * @param pageNumber
+	 * @param offsetInPage
 	 */
-	fun seek(offset: Int) {
-		buffer.seek(offset)
-	}
-
-	fun seek(pageNumber: UInt, offset: UInt) {
-		((pageNumber * pageSize) + offset).toInt().run {
-			logger.trace { "Seek to page $pageNumber offset $offset (=$this)" }
+	fun seek(pageNumber: UInt, offsetInPage: UInt) {
+		((pageNumber * pageSize) + offsetInPage).toInt().run {
+			logger.trace { "Seek to page $pageNumber offset $offsetInPage (=$this)" }
 			buffer.position(this)
 		}
 	}

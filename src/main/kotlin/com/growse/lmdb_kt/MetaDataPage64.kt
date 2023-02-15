@@ -32,4 +32,8 @@ data class MetaDataPage64(
 		lastPage = dbMappedBuffer.readULong(),
 		txnId = dbMappedBuffer.readULong(),
 	)
+
+	override fun dump(): Map<String, ByteArray> {
+		throw AssertionError("Can't dump a metadatapage page directly")
+	}
 }
