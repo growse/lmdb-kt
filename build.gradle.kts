@@ -5,6 +5,7 @@ plugins {
 	id("maven-publish")
 	signing
 	id("com.adarshr.test-logger") version ("3.2.0")
+	jacoco
 }
 
 group = "com.growse"
@@ -23,6 +24,10 @@ dependencies {
 
 tasks.test {
 	useJUnitPlatform()
+}
+
+tasks.jacocoTestReport {
+	dependsOn(tasks.test) // tests are required to run before generating the report
 }
 
 tasks.withType<KotlinCompile> {
