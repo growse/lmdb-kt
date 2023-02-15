@@ -25,7 +25,7 @@ class LmdbTests {
 		assertThrows<AssertionError> { Environment(Paths.get("boop")) }
 	}
 
-	@ParameterizedTest
+	@ParameterizedTest(name = "{index}: {0}")
 	@MethodSource("databasesWithStats")
 	fun `given an environment, when fetching the stats, then the correct pagesize is detected`(
 		databasePathWithStats: DatabaseWithStats,
@@ -43,7 +43,25 @@ class LmdbTests {
 			}
 	}
 
-	@ParameterizedTest
+	@Test
+	fun `given an environment, when fetching the stats with the wrong pagesize, then an assertion error is thrown`() {
+		assertThrows<UnableToDetectPageSizeException> {
+			Environment(
+				Paths.get(
+					javaClass
+						.getResource("/databases/little-endian/4KB-page-size/100-random-values")!!
+						.toURI(),
+				),
+				readOnly = true,
+				locking = false,
+				byteOrder = ByteOrder.LITTLE_ENDIAN,
+				pageSize = 1024.toUInt(),
+			)
+				.use { env -> env.stat() }
+		}
+	}
+
+	@ParameterizedTest(name = "{index}: {0}")
 	@MethodSource("databasesWithStats")
 	fun `given an environment, when fetching the stats, then the correct stats are returned`(
 		databaseWithStats: DatabaseWithStats,
