@@ -46,9 +46,10 @@ data class LeafNode(
 				}
 			is Either.Right ->
 				(
-					buffer.getPage((value as Either.Right<ByteBuffer, Long>).right.toUInt()).also {
-						assert(it is OverflowPage)
-					} as OverflowPage
+					buffer.getPage((value as Either.Right<ByteBuffer, Long>).right.toUInt())
+						.also {
+							assert(it is OverflowPage)
+						} as OverflowPage
 					)
 					.getValue(valueSize)
 		}

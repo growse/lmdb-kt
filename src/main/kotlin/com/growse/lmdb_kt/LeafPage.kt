@@ -32,14 +32,15 @@ data class LeafPage(
 		}
 
 	override fun get(key: ByteArray): Result<ByteArray> =
-		Result.success(
-			nodes.also {
-				logger.trace { "Looking for ${key.toHex()} on page $number" }
+		nodes.also {
+			logger.trace { "Looking for ${key.toHex()} on LeafPage $number" }
+		}.firstOrNull { it.keyBytes().contentEquals(key) }.run {
+			if (this == null) {
+				Result.failure(Page.KeyNotFoundInPage(key, number))
+			} else {
+				Result.success(valueBytes())
 			}
-				.first { it.keyBytes().contentEquals(key) }
-				.also { logger.trace { "Found it in a leaf node: $it" } }
-				.valueBytes(),
-		)
+		}
 
 	override fun dump(): Map<String, ByteArray> =
 		nodes.associate { leafNode ->

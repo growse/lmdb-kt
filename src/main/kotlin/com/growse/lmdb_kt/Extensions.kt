@@ -9,8 +9,6 @@ internal fun Buffer.seek(offset: Int) {
 internal fun ByteArray.toHex(): String =
 	joinToString(separator = "") { eachByte -> "%02x".format(eachByte) }
 
-internal fun ByteArray.toAscii(): String = String(this)
-
 internal fun ByteArray.compareWith(byteArray: ByteArray): Int {
 	if (this.contentEquals(byteArray)) {
 		return 0

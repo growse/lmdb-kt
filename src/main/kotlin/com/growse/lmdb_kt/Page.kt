@@ -43,4 +43,9 @@ interface Page {
 			return "${super.toString()} : $flags"
 		}
 	}
+	class KeyNotFoundInPage(private val key: ByteArray, private val pageNumber: UInt) : Throwable() {
+		override fun toString(): String {
+			return "Key ${key.toHex()} not found on page $pageNumber"
+		}
+	}
 }

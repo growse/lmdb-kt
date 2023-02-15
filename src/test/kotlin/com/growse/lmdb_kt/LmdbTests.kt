@@ -12,6 +12,7 @@ import java.nio.file.Paths
 import java.util.stream.Stream
 import kotlin.io.path.bufferedReader
 import kotlin.streams.asSequence
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -173,6 +174,30 @@ class LmdbTests {
 						assertEquals(419, size)
 						assertEquals("b7506a2d4d442dac673c46d27a20d1f7", digest())
 					}
+				}
+			}
+	}
+
+	@Test
+	fun `given an environment, when getting a value for a key that doesn't exist, then a failure result is returned`() {
+		val key = "Non-existent"
+		Environment(
+			Paths.get(
+				javaClass
+					.getResource("/databases/little-endian/4KB-page-size/100-random-values")!!
+					.toURI(),
+			),
+			readOnly = true,
+			locking = false,
+			byteOrder = ByteOrder.LITTLE_ENDIAN,
+			pageSize = 4096.toUInt(),
+		)
+			.use { env ->
+				env.beginTransaction().use { tx ->
+					val value = tx.get(key.toByteArray())
+					assert(value.isFailure)
+					assert(value.exceptionOrNull() is Page.KeyNotFoundInPage)
+					assertContains(value.exceptionOrNull().toString(), key.toByteArray().toHex())
 				}
 			}
 	}
