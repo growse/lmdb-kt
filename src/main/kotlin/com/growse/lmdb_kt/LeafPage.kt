@@ -31,6 +31,13 @@ data class LeafPage(
 				.map { LeafNode(buffer, number, it.toUInt()) }
 		}
 
+	override fun get(key: ByteArray): Result<ByteArray> =
+		Result.success(
+			nodes.first { it.keyBytes().contentEquals(key) }
+				.also { logger.trace { "Found it in a leaf node: $it" } }
+				.valueBytes(),
+		)
+
 	override fun dump(): Map<String, ByteArray> =
 		nodes.associate { leafNode ->
 			when (leafNode.value) {

@@ -21,11 +21,6 @@ interface Page {
 		logger.trace { "Looking for ${key.toHex()} on page $number" }
 		buffer.seek(number, 0u)
 		return when (this) {
-			is LeafPage -> {
-				val leafNode = nodes.first { it.keyBytes().contentEquals(key) }
-				logger.trace { "Found it in a leaf node: $leafNode" }
-				Result.success(leafNode.valueBytes())
-			}
 			is BranchPage -> {
 				nodes
 					.last { it.keyBytes().compareWith(key) < 0 }
