@@ -38,4 +38,8 @@ data class OverflowPage(
 	override fun dump(): Map<String, ByteArray> {
 		throw AssertionError("Can't dump an overflow page directly")
 	}
+
+	override fun get(key: ByteArray): Result<ByteArray> = Result.failure(
+		Exception("Can't get a value from an overflow page"),
+	)
 }

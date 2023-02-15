@@ -36,4 +36,8 @@ data class MetaDataPage64(
 	override fun dump(): Map<String, ByteArray> {
 		throw AssertionError("Can't dump a metadatapage page directly")
 	}
+
+	override fun get(key: ByteArray): Result<ByteArray> = Result.failure(
+		Exception("Can't get a value from a Metadata page")
+	)
 }

@@ -22,7 +22,7 @@ data class LeafPage(
 		number: UInt,
 	) : this(buffer = dbMappedBuffer, number = number, pageHeader)
 
-	val nodes: List<LeafNode>
+	private val nodes: List<LeafNode>
 		get() {
 			buffer.seek(number, PageHeader.SIZE)
 			logger.trace { "Leaf page has ${pageHeader.numKeys()} keys" }
@@ -33,7 +33,10 @@ data class LeafPage(
 
 	override fun get(key: ByteArray): Result<ByteArray> =
 		Result.success(
-			nodes.first { it.keyBytes().contentEquals(key) }
+			nodes.also {
+				logger.trace { "Looking for ${key.toHex()} on page $number" }
+			}
+				.first { it.keyBytes().contentEquals(key) }
 				.also { logger.trace { "Found it in a leaf node: $it" } }
 				.valueBytes(),
 		)

@@ -17,25 +17,13 @@ interface Page {
 	 */
 	fun dump(): Map<String, ByteArray>
 
-	fun get(key: ByteArray): Result<ByteArray> {
-		logger.trace { "Looking for ${key.toHex()} on page $number" }
-		buffer.seek(number, 0u)
-		return when (this) {
-			is BranchPage -> {
-				nodes
-					.last { it.keyBytes().compareWith(key) < 0 }
-					.also {
-						logger.trace { "Found it in a branch node. Going to child page: ${it.childPage}" }
-					}
-					.childPage
-					.run(buffer::getPage)
-					.get(key)
-			}
-			else -> {
-				Result.failure(Exception("Root page is not a leaf or branch page"))
-			}
-		}
-	}
+	/**
+	 * Gets a copy on the value stored against the requested key on this page
+	 *
+	 * @param key to fetch the value for
+	 * @return a copy of the value stored against the key on this page
+	 */
+	fun get(key: ByteArray): Result<ByteArray>
 
 	/** Page flags http://www.lmdb.tech/doc/group__mdb__page.html */
 	enum class Flags(val _idx: Int) {

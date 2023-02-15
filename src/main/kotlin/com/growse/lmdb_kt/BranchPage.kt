@@ -15,7 +15,7 @@ data class BranchPage(
 		number: UInt,
 	) : this(buffer = buffer, number = number, pageHeader)
 
-	val nodes: List<BranchNode>
+	private val nodes: List<BranchNode>
 		get() {
 			buffer.seek(number, PageHeader.SIZE)
 			logger.trace { "Branch page has ${pageHeader.numKeys()} keys" }
@@ -23,6 +23,18 @@ data class BranchPage(
 				.map { buffer.readShort().also { logger.trace { "key at $it" } } }
 				.map { BranchNode(buffer, number, it.toUInt()) }
 		}
+
+	override fun get(key: ByteArray): Result<ByteArray> =
+		nodes.also {
+			logger.trace { "Looking for ${key.toHex()} on page $number" }
+		}
+			.last { it.keyBytes().compareWith(key) < 0 }
+			.also {
+				logger.trace { "Found it in a branch node. Going to child page: ${it.childPage}" }
+			}
+			.childPage
+			.run(buffer::getPage)
+			.get(key)
 
 	override fun dump(): Map<String, ByteArray> =
 		nodes
