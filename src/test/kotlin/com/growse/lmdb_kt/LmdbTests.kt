@@ -126,7 +126,7 @@ class LmdbTests {
 	}
 
 	@Test
-	fun `given an environment, when getting a key, then the value is returned`() {
+	fun `given an environment, when getting an oversize value for a key, then the value is returned`() {
 		val key = "KEYimcfsuuqqdufeckfbglgoairkcfhvwsafzwmbpgfbxzhtvlrx"
 		Environment(
 			Paths.get(
@@ -146,6 +146,32 @@ class LmdbTests {
 					value.getOrThrow().run {
 						assertEquals(7209, size)
 						assertEquals("f161ed45d7744c25a2ffd85c828c0543", digest())
+					}
+				}
+			}
+	}
+
+	@Test
+	fun `given an environment, when getting an undersized value for a key, then the value is returned`() {
+		val key = "KEYb"
+		Environment(
+			Paths.get(
+				javaClass
+					.getResource("/databases/little-endian/4KB-page-size/100-random-values")!!
+					.toURI(),
+			),
+			readOnly = true,
+			locking = false,
+			byteOrder = ByteOrder.LITTLE_ENDIAN,
+			pageSize = 4096.toUInt(),
+		)
+			.use { env ->
+				env.beginTransaction().use { tx ->
+					val value = tx.get(key.toByteArray())
+					assert(value.isSuccess)
+					value.getOrThrow().run {
+						assertEquals(419, size)
+						assertEquals("b7506a2d4d442dac673c46d27a20d1f7", digest())
 					}
 				}
 			}
