@@ -15,7 +15,7 @@ interface Page {
 	 *
 	 * @return a map of keys/values
 	 */
-	fun dump(): Map<String, ByteArray>
+	fun dump(): Map<ByteArrayKey, ByteArray>
 
 	/**
 	 * Gets a copy on the value stored against the requested key on this page

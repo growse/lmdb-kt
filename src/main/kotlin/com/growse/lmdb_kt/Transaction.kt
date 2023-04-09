@@ -34,7 +34,7 @@ class Transaction(private val env: Environment, databaseName: String = "0") :
 	 *
 	 * @return a map of keys (as strings) and values
 	 */
-	fun dump(): Map<String, ByteArray> {
+	fun dump(): Map<ByteArrayKey, ByteArray> {
 		logger.debug { "Dump database" }
 		if (database.rootPageNumber == -1L) {
 			return emptyMap()

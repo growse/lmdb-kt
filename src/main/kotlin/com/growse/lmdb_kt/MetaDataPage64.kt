@@ -33,11 +33,11 @@ data class MetaDataPage64(
 		txnId = dbMappedBuffer.readULong(),
 	)
 
-	override fun dump(): Map<String, ByteArray> {
+	override fun dump(): Map<ByteArrayKey, ByteArray> {
 		throw AssertionError("Can't dump a metadatapage page directly")
 	}
 
 	override fun get(key: ByteArray): Result<ByteArray> = Result.failure(
-		Exception("Can't get a value from a Metadata page")
+		Exception("Can't get a value from a Metadata page"),
 	)
 }

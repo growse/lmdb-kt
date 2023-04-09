@@ -31,35 +31,33 @@ data class LeafPage(
 				.map { LeafNode(buffer, number, it.toUInt()) }
 		}
 
-	override fun get(key: ByteArray): Result<ByteArray> =
-		nodes.also {
-			logger.trace { "Looking for ${key.toHex()} on LeafPage $number" }
-		}.firstOrNull { it.keyBytes().contentEquals(key) }.run {
-			if (this == null) {
-				Result.failure(Page.KeyNotFoundInPage(key, number))
-			} else {
-				Result.success(valueBytes())
+	override fun get(key: ByteArray): Result<ByteArray> = nodes.also {
+		logger.trace { "Looking for ${key.toHex()} on LeafPage $number" }
+	}.firstOrNull { it.keyBytes().contentEquals(key) }.run {
+		if (this == null) {
+			Result.failure(Page.KeyNotFoundInPage(key, number))
+		} else {
+			Result.success(valueBytes())
+		}
+	}
+
+	override fun dump(): Map<ByteArrayKey, ByteArray> = nodes.associate { leafNode ->
+		when (leafNode.value) {
+			// It's an in-line value
+			is Either.Left -> {
+				ByteArray(leafNode.key.capacity())
+					.apply(leafNode.key::get)
+					.toByteArrayKey() to ByteArray(leafNode.valueSize.toInt()).apply(
+					(leafNode.value as Either.Left<ByteBuffer, *>).left::get,
+				)
+			}
+
+			// It's an overflow value
+			is Either.Right -> {
+				val overflowPage = buffer.getPage((leafNode.value as Either.Right<ByteBuffer, Long>).right.toUInt())
+				assert(overflowPage is OverflowPage)
+				leafNode.keyBytes().toByteArrayKey() to (overflowPage as OverflowPage).getValue(leafNode.valueSize)
 			}
 		}
-
-	override fun dump(): Map<String, ByteArray> =
-		nodes.associate { leafNode ->
-			when (leafNode.value) {
-				// It's an in-line value
-				is Either.Left -> {
-					String(ByteArray(leafNode.key.capacity()).apply(leafNode.key::get)) to
-						ByteArray(leafNode.valueSize.toInt())
-							.apply((leafNode.value as Either.Left<ByteBuffer, *>).left::get)
-				}
-
-				// It's an overflow value
-				is Either.Right -> {
-					val overflowPage =
-						buffer.getPage((leafNode.value as Either.Right<ByteBuffer, Long>).right.toUInt())
-					assert(overflowPage is OverflowPage)
-					String(leafNode.keyBytes()) to
-						(overflowPage as OverflowPage).getValue(leafNode.valueSize)
-				}
-			}
-		}
+	}
 }

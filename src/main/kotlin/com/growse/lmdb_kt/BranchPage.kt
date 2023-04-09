@@ -36,7 +36,7 @@ data class BranchPage(
 			.run(buffer::getPage)
 			.get(key)
 
-	override fun dump(): Map<String, ByteArray> =
+	override fun dump(): Map<ByteArrayKey, ByteArray> =
 		nodes
 			.map { nodeAddress ->
 				logger.trace { "Branch node points to page at ${nodeAddress.childPage}" }
