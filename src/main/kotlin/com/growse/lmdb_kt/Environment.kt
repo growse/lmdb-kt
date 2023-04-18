@@ -6,6 +6,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.channels.FileChannel
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.*
 import kotlin.io.path.fileSize
 import kotlin.io.path.isDirectory
@@ -23,12 +24,19 @@ private val logger = KotlinLogging.logger {}
  *   used to populate the [Stat] structure
  */
 class Environment(
-	lmdbPath: Path,
+	lmdbPath: String,
 	pageSize: UInt? = null,
 	readOnly: Boolean = false,
 	locking: Boolean = true,
-	val byteOrder: ByteOrder = ByteOrder.nativeOrder(),
+	private val byteOrder: ByteOrder = ByteOrder.nativeOrder(),
 ) : AutoCloseable {
+	constructor(
+		lmdbPath: Path,
+		pageSize: UInt? = null,
+		readOnly: Boolean = false,
+		locking: Boolean = true,
+		byteOrder: ByteOrder = ByteOrder.nativeOrder(),
+	) : this(lmdbPath.toString(), pageSize, readOnly, locking, byteOrder)
 	private var dataFile: Path
 	private var lockFile: Path
 	private var dataFileChannel: FileChannel
@@ -43,12 +51,13 @@ class Environment(
 	 * be used to populate the [Stat] structure
 	 */
 	init {
+		val dirPath = Paths.get(lmdbPath)
 		assert(readOnly) { "Writes are not currently implemented" }
 		assert(!locking) { "Locking is not currently implemented" }
-		assert(lmdbPath.isDirectory()) { "Supplied path is not a directory" }
+		assert(dirPath.isDirectory()) { "Supplied path is not a directory" }
 
-		dataFile = lmdbPath.resolve(DATA_FILENAME)
-		lockFile = lmdbPath.resolve(LOCK_FILENAME)
+		dataFile = dirPath.resolve(DATA_FILENAME)
+		lockFile = dirPath.resolve(LOCK_FILENAME)
 		assert(dataFile.isRegularFile()) { "Supplied path does not contain a data file" }
 		if (locking) {
 			assert(lockFile.isRegularFile()) { "Supplied path does not contain a lock file" }

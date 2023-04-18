@@ -64,7 +64,7 @@ class Dump : CliktCommand(name = "dump") {
 		println("Database at ${commonOptions.databasePath}")
 		Environment(commonOptions.databasePath, readOnly = true, locking = false).use {
 			it.beginTransaction().dump().forEach { (k, v) ->
-				Paths.get("${Base64.getEncoder().encodeToString(k.bytes)}.dat").writeBytes(
+				commonOptions.databasePath.resolve("${Base64.getEncoder().encodeToString(k.bytes)}.dat").writeBytes(
 					v,
 					StandardOpenOption.CREATE_NEW,
 					StandardOpenOption.WRITE,
