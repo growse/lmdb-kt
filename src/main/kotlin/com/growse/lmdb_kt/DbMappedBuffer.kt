@@ -85,7 +85,11 @@ data class DbMappedBuffer(private val buffer: ByteBuffer, internal val pageSize:
 	 * @return a [ByteBuffer] representing the sliced data
 	 */
 	fun slice(pageNumber: UInt, index: Int, length: Int): ByteBuffer {
-		return buffer.slice((pageNumber * pageSize).toInt() + index, length)
+		val position = (pageNumber * pageSize).toInt() + index
+		return buffer.run {
+			position(position)
+			slice().limit(length)
+		}
 	}
 
 	/**

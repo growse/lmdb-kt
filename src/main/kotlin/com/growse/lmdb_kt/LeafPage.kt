@@ -45,7 +45,7 @@ data class LeafPage(
 		when (leafNode.value) {
 			// It's an in-line value
 			is Either.Left -> {
-				ByteArray(leafNode.key.capacity())
+				ByteArray(leafNode.key.limit())
 					.apply(leafNode.key::get)
 					.toByteArrayKey() to ByteArray(leafNode.valueSize.toInt()).apply(
 					(leafNode.value as Either.Left<ByteBuffer, *>).left::get,
