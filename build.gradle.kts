@@ -76,6 +76,13 @@ publishing {
 						url.set("https://opensource.org/licenses/MIT")
 					}
 				}
+				developers {
+					developer {
+						id.set("growse")
+						name.set("Andrew Rowson")
+						email.set("github@growse.com")
+					}
+				}
 				scm {
 					connection.set("scm:git:git://github.com/growse/lmdb-kt.git")
 					developerConnection.set("scm:git:ssh://git@github.com:growse/lmdb-kt.git")
