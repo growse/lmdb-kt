@@ -9,8 +9,7 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.path
 import com.growse.lmdb_kt.Environment
-import mu.KotlinLogging
-import java.nio.file.Paths
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.nio.file.StandardOpenOption
 import java.util.*
 import kotlin.io.path.writeBytes

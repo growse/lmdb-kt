@@ -1,6 +1,6 @@
 package com.growse.lmdb_kt
 
-import mu.KotlinLogging
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.*
 
 private val logger = KotlinLogging.logger {}

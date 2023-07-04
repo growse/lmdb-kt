@@ -1,7 +1,7 @@
 package com.growse.lmdb_kt
 
 import com.growse.lmdb_kt.Environment.Stat
-import mu.KotlinLogging
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.channels.FileChannel
