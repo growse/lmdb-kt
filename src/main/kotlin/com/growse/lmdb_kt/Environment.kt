@@ -11,6 +11,7 @@ import java.util.*
 import kotlin.io.path.fileSize
 import kotlin.io.path.isDirectory
 import kotlin.io.path.isRegularFile
+import kotlin.io.path.readBytes
 
 private val logger = KotlinLogging.logger {}
 
@@ -63,7 +64,9 @@ class Environment(
 			assert(lockFile.isRegularFile()) { "Supplied path does not contain a lock file" }
 		}
 
-		logger.trace { "Mapping file $dataFile" }
+		logger.trace {
+			"Mapping file $dataFile. Size is ${dataFile.fileSize()}, md5 is ${dataFile.readBytes().digest()}"
+		}
 		dataFileChannel = FileChannel.open(dataFile)
 
 		val mappedFile =
