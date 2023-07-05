@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "com.growse"
-version = "0.1"
+version = "0.1.1-SNAPSHOT"
 
 repositories {
 	mavenCentral()
