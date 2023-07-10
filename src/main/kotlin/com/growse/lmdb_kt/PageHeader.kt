@@ -12,31 +12,38 @@ import java.util.*
  * @param buffer a [ByteBuffer] for the page
  * @constructor Parses the page header, determining whether the page is an overflow
  */
-class PageHeader(buffer: DbMappedBuffer) {
-	private val pageNumber: Long
-	private val padding: UShort
-	val flags: EnumSet<Page.Flags>
-	val pagesOrRange: Either<UInt, Environment.Range>
-
-	companion object {
-		const val SIZE: UInt = 16u
+class PageHeader(buffer: DbMappedBuffer, private val pagenumber: UInt) {
+	val storedPageNumber: Long by lazy {
+		buffer.run {
+			seek(pagenumber)
+			readLong()
+		}
+	}
+	val flags by lazy {
+		buffer.run {
+			seek(pagenumber, 12u)
+			flags(Page.Flags::class.java, 2u)
+		}
 	}
 
-	init {
-		pageNumber = buffer.readLong()
-		padding = buffer.readUShort()
-		flags = buffer.flags(Page.Flags::class.java, 2u)
-		pagesOrRange =
+	val pagesOrRange: Either<UInt, Environment.Range> by lazy {
+		buffer.run {
 			if (flags.contains(Page.Flags.OVERFLOW)) {
+				seek(pagenumber)
 				Either.Left(buffer.readUInt())
 			} else {
 				Either.Right(Environment.Range(buffer.readUShort(), buffer.readUShort()))
 			}
+		}
 	}
 
 	fun numKeys(): Int =
 		when (pagesOrRange) {
 			is Either.Left -> 0
-			is Either.Right -> (pagesOrRange.right.lower.toShort() - 16) / 2
+			is Either.Right -> ((pagesOrRange as Either.Right<UInt, Environment.Range>).right.lower.toShort() - 16) / 2
 		}
+
+	companion object {
+		const val SIZE: UInt = 16u
+	}
 }

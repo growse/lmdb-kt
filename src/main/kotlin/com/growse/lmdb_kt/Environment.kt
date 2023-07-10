@@ -165,7 +165,7 @@ class Environment(
 		throw UnableToDetectPageSizeException()
 	}
 
-	fun getMetadataPagesWithPageSize(
+	private fun getMetadataPagesWithPageSize(
 		buffer: ByteBuffer,
 		pageSize: UInt,
 	): Pair<MetaDataPage64, MetaDataPage64> {
