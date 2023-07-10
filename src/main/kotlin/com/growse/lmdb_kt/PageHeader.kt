@@ -21,15 +21,16 @@ class PageHeader(buffer: DbMappedBuffer, private val pagenumber: UInt) {
 	}
 	val flags by lazy {
 		buffer.run {
-			seek(pagenumber, 12u)
+			seek(pagenumber, 8u + 2u) // 2u of padding
 			flags(Page.Flags::class.java, 2u)
 		}
 	}
 
 	val pagesOrRange: Either<UInt, Environment.Range> by lazy {
 		buffer.run {
-			if (flags.contains(Page.Flags.OVERFLOW)) {
-				seek(pagenumber)
+			val isOverflow = flags.contains(Page.Flags.OVERFLOW)
+			seek(pagenumber, 12u)
+			if (isOverflow) {
 				Either.Left(buffer.readUInt())
 			} else {
 				Either.Right(Environment.Range(buffer.readUShort(), buffer.readUShort()))
