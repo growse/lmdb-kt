@@ -165,11 +165,16 @@ class Environment(
 		throw UnableToDetectPageSizeException()
 	}
 
-	fun getMetadataPagesWithPageSize(
+	private fun getMetadataPagesWithPageSize(
 		buffer: ByteBuffer,
 		pageSize: UInt,
 	): Pair<MetaDataPage64, MetaDataPage64> {
-		val first = DbMappedBuffer(buffer, pageSize).getPage(0u)
+		val first = try {
+			DbMappedBuffer(buffer, pageSize).getPage(0u)
+		} catch (e: AssertionError) {
+			// If we got to this point on the very first page, then we're not dealing with an LMDB file
+			throw NotAnLMDBDataFile()
+		}
 		assert(first is MetaDataPage64) { "First page is not a metadata page" }
 		assert((first as MetaDataPage64).version == 1u) { "Invalid page version ${first.version}" }
 		assert(first.magic == 0xBEEFC0DE.toUInt()) { "Page does not contain required magic" }
@@ -194,3 +199,5 @@ class Environment(
 		private const val LOCK_FILENAME = "lock.mdb"
 	}
 }
+
+class NotAnLMDBDataFile : Throwable()

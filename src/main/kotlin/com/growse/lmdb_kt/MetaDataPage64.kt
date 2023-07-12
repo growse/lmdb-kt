@@ -1,5 +1,9 @@
 package com.growse.lmdb_kt
 
+import io.github.oshai.kotlinlogging.KotlinLogging
+
+private val logger = KotlinLogging.logger {}
+
 /**
  * MDB_meta uint32_t mm_magic uint32_t mm_version void * mm_address size_t mm_mapsize MDB_db mm_dbs
  * [CORE_DBS] (CORE_DBS 2 - Number of DBs in metapage (free and main) - also hardcoded elsewhere)
@@ -8,30 +12,59 @@ package com.growse.lmdb_kt
 data class MetaDataPage64(
 	override val buffer: DbMappedBuffer,
 	override val number: UInt,
-	val magic: UInt,
-	val version: UInt,
-	val address: ULong,
-	val mapSize: ULong,
-	val freeDb: DB,
-	val mainDb: DB,
-	val lastPage: ULong,
-	val txnId: ULong,
 ) : Page {
-	constructor(
-		dbMappedBuffer: DbMappedBuffer,
-		number: UInt,
-	) : this(
-		buffer = dbMappedBuffer,
-		number = number,
-		magic = dbMappedBuffer.readUInt(),
-		version = dbMappedBuffer.readUInt(),
-		address = dbMappedBuffer.readULong(),
-		mapSize = dbMappedBuffer.readULong(),
-		freeDb = DB(dbMappedBuffer),
-		mainDb = DB(dbMappedBuffer),
-		lastPage = dbMappedBuffer.readULong(),
-		txnId = dbMappedBuffer.readULong(),
-	)
+	val magic: UInt by lazy {
+		buffer.run {
+			seek(number, PageHeader.SIZE)
+			readUInt()
+		}
+	}
+	val version: UInt by lazy {
+		buffer.run {
+			seek(number, PageHeader.SIZE + 4u)
+			readUInt()
+		}
+	}
+	val address: ULong by lazy {
+		buffer.run {
+			seek(number, PageHeader.SIZE + 8u)
+			readULong()
+		}
+	}
+	val mapSize: ULong by lazy {
+		buffer.run {
+			seek(number, PageHeader.SIZE + 16u)
+			readULong()
+		}
+	}
+
+	val freeDb: DB by lazy {
+		logger.trace { "Reading freeDb" }
+		buffer.run {
+			seek(number, PageHeader.SIZE + 24u)
+			DB(buffer)
+		}
+	}
+	val mainDb: DB by lazy {
+		logger.trace { "Reading mainDb" }
+		buffer.run {
+			seek(number, PageHeader.SIZE + 24u + DB.SIZE)
+			DB(buffer)
+		}
+	}
+	val lastPage: ULong by lazy {
+		buffer.run {
+			seek(number, PageHeader.SIZE + 24u + DB.SIZE + DB.SIZE)
+			readULong()
+		}
+	}
+
+	val txnId: ULong by lazy {
+		buffer.run {
+			seek(number, PageHeader.SIZE + 24u + DB.SIZE + DB.SIZE + 8u)
+			readULong()
+		}
+	}
 
 	override fun dump(): Map<ByteArrayKey, ByteArray> {
 		throw AssertionError("Can't dump a metadatapage page directly")

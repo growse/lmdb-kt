@@ -32,7 +32,7 @@ abstract class Node(buffer: DbMappedBuffer, pageNumber: UInt, addressInPage: UIn
 	fun keyBytes(): ByteArray = ByteArray(keySize.toInt()).apply(key::get)
 
 	/** Node flags http://www.lmdb.tech/doc/group__mdb__node.html */
-	enum class Flags(val _idx: Int) {
+	enum class Flags(val idx: Int) {
 		BIGDATA(0),
 		SUBDATA(1),
 		DUPDATA(2),

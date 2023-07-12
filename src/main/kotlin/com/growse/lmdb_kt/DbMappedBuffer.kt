@@ -24,7 +24,12 @@ data class DbMappedBuffer(private val buffer: ByteBuffer, internal val pageSize:
 		logger.trace { "Getting page $number" }
 		val pageStart = (number * this.pageSize).toInt()
 		buffer.position(pageStart)
-		val pageHeader = PageHeader(this)
+		val pageHeader = PageHeader(this, number)
+		assert(
+			pageHeader.storedPageNumber == number.toLong(),
+		) {
+			"Page number is not correct for page! Requested=$number, stored is ${pageHeader.storedPageNumber}"
+		}
 		return if (pageHeader.flags.contains(Page.Flags.META)) {
 			buffer.position(pageStart + PageHeader.SIZE.toInt())
 			MetaDataPage64(this, number)
@@ -45,7 +50,7 @@ data class DbMappedBuffer(private val buffer: ByteBuffer, internal val pageSize:
 	 * @param pageNumber
 	 * @param offsetInPage
 	 */
-	fun seek(pageNumber: UInt, offsetInPage: UInt) {
+	fun seek(pageNumber: UInt, offsetInPage: UInt = 0u) {
 		((pageNumber * pageSize) + offsetInPage).toInt().run {
 			logger.trace { "Seek to page $pageNumber offset $offsetInPage (=$this)" }
 			buffer.position(this)
@@ -101,17 +106,11 @@ data class DbMappedBuffer(private val buffer: ByteBuffer, internal val pageSize:
 	 * @return a set of [T] containing the Enums for which the bits were set
 	 */
 	fun <T : Enum<T>> flags(clazz: Class<T>, byteCount: UShort): EnumSet<T> =
-		BitSet.valueOf(buffer.slice().apply { limit(byteCount.toInt()) }).let { bitset ->
-			buffer.seek(byteCount.toInt())
-			val constants = clazz.enumConstants
-			EnumSet.noneOf(clazz).apply {
-				addAll(
-					IntRange(0, bitset.size()).flatMap {
-						if (bitset[it]) listOf(constants[it]) else emptyList()
-					},
-				)
+		BitSet.valueOf(buffer.slice().apply { limit(byteCount.toInt()) })
+			.let { bitset ->
+				buffer.seek(byteCount.toInt()) // Until everything is fully lazy, we need to advance the buffer
+				EnumSet.allOf(clazz).apply { removeIf { flag -> !bitset[flag.intValue()] } }
 			}
-		}
 
 	/**
 	 * Copies data out of the [buffer] into the given [ByteArray]
