@@ -106,16 +106,18 @@ data class DbMappedBuffer(private val buffer: ByteBuffer, internal val pageSize:
 	 * @return a set of [T] containing the Enums for which the bits were set
 	 */
 	fun <T : Enum<T>> flags(clazz: Class<T>, byteCount: UShort): EnumSet<T> =
-		BitSet.valueOf(buffer.slice().apply { limit(byteCount.toInt()) }).let { bitset ->
-			val constants = clazz.enumConstants
-			EnumSet.noneOf(clazz).apply {
-				addAll(
-					IntRange(0, bitset.size()).flatMap { bitnum ->
-						if (bitset[bitnum]) listOf(constants[bitnum]) else emptyList()
-					},
-				)
+		BitSet.valueOf(buffer.slice().apply { limit(byteCount.toInt()) })
+			.let { bitset ->
+				buffer.seek(byteCount.toInt()) // Until everything is fully lazy, we need to advance the buffer
+				val constants = clazz.enumConstants
+				EnumSet.noneOf(clazz).apply {
+					addAll(
+						IntRange(0, bitset.size()).flatMap { bitnum ->
+							if (bitset[bitnum]) listOf(constants[bitnum]) else emptyList()
+						},
+					)
+				}
 			}
-		}
 
 	/**
 	 * Copies data out of the [buffer] into the given [ByteArray]

@@ -1,5 +1,9 @@
 package com.growse.lmdb_kt
 
+import io.github.oshai.kotlinlogging.KotlinLogging
+
+private val logger = KotlinLogging.logger {}
+
 /**
  * MDB_meta uint32_t mm_magic uint32_t mm_version void * mm_address size_t mm_mapsize MDB_db mm_dbs
  * [CORE_DBS] (CORE_DBS 2 - Number of DBs in metapage (free and main) - also hardcoded elsewhere)
@@ -35,12 +39,14 @@ data class MetaDataPage64(
 	}
 
 	val freeDb: DB by lazy {
+		logger.trace { "Reading freeDb" }
 		buffer.run {
 			seek(number, PageHeader.SIZE + 24u)
 			DB(buffer)
 		}
 	}
 	val mainDb: DB by lazy {
+		logger.trace { "Reading mainDb" }
 		buffer.run {
 			seek(number, PageHeader.SIZE + 24u + DB.SIZE)
 			DB(buffer)

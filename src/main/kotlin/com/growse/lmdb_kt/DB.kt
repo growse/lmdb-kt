@@ -1,6 +1,8 @@
 package com.growse.lmdb_kt
 
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.*
+private val logger = KotlinLogging.logger {}
 
 /**
  * Represents a single database http://www.lmdb.tech/doc/group__internal.html#structMDB__db uint32_t
