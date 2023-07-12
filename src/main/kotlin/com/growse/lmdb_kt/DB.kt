@@ -33,7 +33,7 @@ data class DB(
 	)
 
 	/** Database flags http://www.lmdb.tech/doc/group__mdb__dbi__open.html */
-	enum class Flags(val _idx: Int) {
+	enum class Flags(val idx: Int) {
 		REVERSEKEY(0),
 		DUPSORT(1),
 		INTEGERKEY(2),
@@ -42,7 +42,16 @@ data class DB(
 		REVERSEDUP(5),
 		CREATE(14),
 	}
+
 	companion object {
 		const val SIZE: UInt = 48u
 	}
 }
+
+fun <T : Enum<T>> T.intValue(): Int =
+	when (this) {
+		is DB.Flags -> this.idx
+		is Page.Flags -> this.idx
+		is Node.Flags -> this.idx
+		else -> throw Exception("Bzzt")
+	}

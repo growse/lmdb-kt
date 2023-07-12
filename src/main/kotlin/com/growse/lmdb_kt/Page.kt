@@ -26,7 +26,7 @@ interface Page {
 	fun get(key: ByteArray): Result<ByteArray>
 
 	/** Page flags http://www.lmdb.tech/doc/group__mdb__page.html */
-	enum class Flags(val _idx: Int) {
+	enum class Flags(val idx: Int) {
 		BRANCH(0),
 		LEAF(1),
 		OVERFLOW(2),
