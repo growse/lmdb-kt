@@ -1,7 +1,6 @@
 package com.growse.lmdb_kt
 
 import java.nio.ByteBuffer
-import java.util.*
 
 /**
  * Represents a page header http://www.lmdb.tech/doc/group__internal.html#structMDB__page
@@ -12,16 +11,16 @@ import java.util.*
  * @param buffer a [ByteBuffer] for the page
  * @constructor Parses the page header, determining whether the page is an overflow
  */
-class PageHeader(buffer: DbMappedBuffer, private val pagenumber: UInt) {
+class PageHeader(buffer: DbMappedBuffer, private val pageNumber: UInt) {
 	val storedPageNumber: Long by lazy {
 		buffer.run {
-			seek(pagenumber)
+			seek(pageNumber)
 			readLong()
 		}
 	}
 	val flags by lazy {
 		buffer.run {
-			seek(pagenumber, 8u + 2u) // 2u of padding
+			seek(pageNumber, 8u + 2u) // 2u of padding
 			flags(Page.Flags::class.java, 2u)
 		}
 	}
@@ -29,7 +28,7 @@ class PageHeader(buffer: DbMappedBuffer, private val pagenumber: UInt) {
 	val pagesOrRange: Either<UInt, Environment.Range> by lazy {
 		buffer.run {
 			val isOverflow = flags.contains(Page.Flags.OVERFLOW)
-			seek(pagenumber, 12u)
+			seek(pageNumber, 12u)
 			if (isOverflow) {
 				Either.Left(buffer.readUInt())
 			} else {

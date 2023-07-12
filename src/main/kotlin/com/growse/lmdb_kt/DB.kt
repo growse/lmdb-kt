@@ -42,4 +42,7 @@ data class DB(
 		REVERSEDUP(5),
 		CREATE(14),
 	}
+	companion object {
+		const val SIZE: UInt = 48u
+	}
 }
