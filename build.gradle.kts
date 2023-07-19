@@ -16,7 +16,7 @@ repositories {
 }
 
 dependencies {
-	implementation("io.github.oshai:kotlin-logging-jvm:5.0.0-beta-04")
+	implementation("io.github.oshai:kotlin-logging-jvm:5.0.0")
 	testImplementation(kotlin("test"))
 	testImplementation("org.slf4j:slf4j-simple:2.0.7")
 	testImplementation("org.junit.jupiter:junit-jupiter-params:5.9.3")
