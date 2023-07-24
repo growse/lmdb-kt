@@ -11,7 +11,7 @@ repositories {
 
 dependencies {
 	implementation(project(":"))
-	implementation("io.github.oshai:kotlin-logging-jvm:5.0.0")
+	implementation("io.github.oshai:kotlin-logging-jvm:5.0.1")
 	implementation("org.slf4j:slf4j-simple:2.0.7")
 	implementation("com.github.ajalt.clikt:clikt:4.1.0")
 	testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.0")
