@@ -13,7 +13,7 @@ dependencies {
 	implementation(project(":"))
 	implementation("io.github.oshai:kotlin-logging-jvm:5.1.0")
 	implementation("org.slf4j:slf4j-simple:2.0.9")
-	implementation("com.github.ajalt.clikt:clikt:4.2.0")
+	implementation("com.github.ajalt.clikt:clikt:4.2.1")
 	testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.0")
 	testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.10.0")
 }
