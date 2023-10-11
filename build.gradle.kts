@@ -4,7 +4,7 @@ plugins {
 	kotlin("jvm") version "1.9.10"
 	id("maven-publish")
 	signing
-	id("com.adarshr.test-logger") version ("3.2.0")
+	id("com.adarshr.test-logger") version ("4.0.0")
 	jacoco
 }
 
