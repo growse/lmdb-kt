@@ -1,10 +1,10 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-	kotlin("jvm") version "1.9.10"
+	alias(libs.plugins.kotlin)
 	id("maven-publish")
 	signing
-	id("com.adarshr.test-logger") version ("4.0.0")
+	alias(libs.plugins.test.logger)
 	jacoco
 }
 
@@ -16,10 +16,10 @@ repositories {
 }
 
 dependencies {
-	implementation("io.github.oshai:kotlin-logging-jvm:5.1.0")
-	testImplementation(kotlin("test"))
-	testImplementation("org.slf4j:slf4j-simple:2.0.9")
-	testImplementation("org.junit.jupiter:junit-jupiter-params:5.10.0")
+	implementation(libs.kotlin.logging.jvm)
+	testImplementation(libs.kotlin.test)
+	testImplementation(libs.junit.params)
+	testImplementation(libs.slf4j)
 }
 
 tasks.test {
