@@ -3,6 +3,7 @@ clikt = "4.2.1"
 junit = "5.10.0"
 kotlin = "1.9.10"
 kotlin-logging-jvm = "5.1.0"
+ktfmt = "0.14.0"
 slf4j = "2.0.9"
 test-logger = "4.0.0"
 
@@ -18,3 +19,4 @@ slf4j = { group = "org.slf4j", name = "slf4j-simple", version.ref = "slf4j" }
 [plugins]
 test-logger = { id = "com.adarshr.test-logger", version.ref = "test-logger" }
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+ktfmt = { id = "com.ncorti.ktfmt.gradle", version.ref= "ktfmt"}
