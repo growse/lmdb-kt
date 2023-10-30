@@ -18,10 +18,11 @@ repositories { mavenCentral() }
 
 dependencies {
 	implementation(libs.kotlin.logging.jvm)
-	testImplementation(libs.kotlin.test)
-	testImplementation(libs.junit.params)
+	testImplementation("io.kotest:kotest-runner-junit5:5.7.0")
+    testImplementation("io.kotest:kotest-assertions-core:5.7.0")
+    testImplementation("io.kotest:kotest-property:5.7.0")
 	testImplementation(libs.slf4j)
-	testImplementation("org.lmdbjava:lmdbjava:0.8.3")
+	testImplementation(libs.lmdb)
 }
 
 tasks.test {
