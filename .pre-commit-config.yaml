@@ -13,6 +13,12 @@ repos:
       - id: unit-test
         name: Run unit tests
         description: Runs unit-tests
-        entry: ./gradlew check
+        entry: ./gradlew --no-daemon check
+        pass_filenames: false
+        language: system
+      - id: ktlint
+        name: ktlint
+        description: Ktlints
+        entry: ./gradlew --no-daemon ktfmtCheck
         pass_filenames: false
         language: system

@@ -6,33 +6,40 @@ plugins {
 	signing
 	alias(libs.plugins.test.logger)
 	jacoco
+	alias(libs.plugins.ktfmt)
 }
+
 
 group = "com.growse"
+
 version = "0.1.1-SNAPSHOT"
 
-repositories {
-	mavenCentral()
-}
+repositories { mavenCentral() }
 
 dependencies {
 	implementation(libs.kotlin.logging.jvm)
 	testImplementation(libs.kotlin.test)
 	testImplementation(libs.junit.params)
 	testImplementation(libs.slf4j)
+	testImplementation("org.lmdbjava:lmdbjava:0.8.3")
 }
 
 tasks.test {
 	useJUnitPlatform()
+	jvmArgs =
+		listOf(
+			"--add-opens",
+			"java.base/java.nio=ALL-UNNAMED",
+			"--add-opens",
+			"java.base/sun.nio.ch=ALL-UNNAMED",
+		)
 }
 
 tasks.jacocoTestReport {
 	dependsOn(tasks.test) // tests are required to run before generating the report
 }
 
-tasks.withType<KotlinCompile> {
-	kotlinOptions.jvmTarget = "17"
-}
+tasks.withType<KotlinCompile> { kotlinOptions.jvmTarget = "17" }
 
 java {
 	withSourcesJar()
