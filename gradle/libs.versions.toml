@@ -1,6 +1,6 @@
 [versions]
 clikt = "4.2.1"
-junit = "5.10.0"
+kotest = "5.7.0"
 kotlin = "1.9.20"
 kotlin-logging-jvm = "5.1.0"
 ktfmt = "0.15.0"
@@ -10,13 +10,17 @@ test-logger = "4.0.0"
 
 [libraries]
 clikt = { group = "com.github.ajalt.clikt", name = "clikt", version.ref = "clikt" }
-junit-params = { group = "org.junit.jupiter", name = "junit-jupiter-params", version.ref = "junit" }
-junit-api = { group = "org.junit.jupiter", name = "junit-jupiter-api", version.ref = "junit" }
-junit-engine = { group = "org.junit.jupiter", name = "junit-jupiter-engine", version.ref = "junit" }
 kotlin-logging-jvm = { group = "io.github.oshai", name = "kotlin-logging-jvm", version.ref = "kotlin-logging-jvm" }
 kotlin-test = { group = "org.jetbrains.kotlin", name = "kotlin-test", version.ref = "kotlin" }
+kotest-runner-junit5 = {group="io.kotest", name="kotest-runner-junit5", version.ref="kotest"}
+kotest-assertions-core = {group="io.kotest", name="kotest-assertions-core", version.ref="kotest"}
+kotest-property = {group="io.kotest", name="kotest-property", version.ref="kotest"}
+kotest-framework-datatest = {group="io.kotest", name="kotest-framework-datatest", version.ref="kotest"}
 lmdb = { group = "org.lmdbjava", name = "lmdbjava", version.ref = "lmdb" }
 slf4j = { group = "org.slf4j", name = "slf4j-simple", version.ref = "slf4j" }
+
+[bundles]
+kotest = ["kotest-runner-junit5", "kotest-assertions-core", "kotest-property", "kotest-framework-datatest"]
 
 [plugins]
 test-logger = { id = "com.adarshr.test-logger", version.ref = "test-logger" }
