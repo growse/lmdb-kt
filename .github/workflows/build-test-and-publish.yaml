@@ -21,7 +21,7 @@ jobs:
           java-version: "17"
       - name: Gradle build
         id: build
-        uses: gradle/gradle-build-action@87a9a15658c426a54dd469d4fc7dc1a73ca9d4a6 # v2
+        uses: gradle/gradle-build-action@8cbcb9948b5892387aed077daf6f90e1f0ba5b27 # v2
         with:
           arguments: |
             ktfmtCheck
@@ -35,7 +35,7 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-      - uses: gradle/gradle-build-action@87a9a15658c426a54dd469d4fc7dc1a73ca9d4a6 # v2
+      - uses: gradle/gradle-build-action@8cbcb9948b5892387aed077daf6f90e1f0ba5b27 # v2
         name: Gradle Test
         with:
           arguments: test
@@ -53,7 +53,7 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-      - uses: gradle/gradle-build-action@87a9a15658c426a54dd469d4fc7dc1a73ca9d4a6 # v2
+      - uses: gradle/gradle-build-action@8cbcb9948b5892387aed077daf6f90e1f0ba5b27 # v2
         name: Publish package
         with:
           arguments: publishMavenPublicationToSonatypeOSSRHRepository
