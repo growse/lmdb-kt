@@ -1,5 +1,5 @@
 [versions]
-clikt = "4.3.0"
+clikt = "4.4.0"
 junit = "5.10.2"
 kotlin = "1.9.23"
 kotlin-logging-jvm = "6.0.9"
