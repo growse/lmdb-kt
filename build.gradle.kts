@@ -1,3 +1,4 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -12,7 +13,7 @@ plugins {
 
 group = "com.growse"
 
-version = "0.1.1"
+version = "0.1.2-SNAPSHOT"
 
 repositories { mavenCentral() }
 
@@ -39,11 +40,10 @@ tasks.jacocoTestReport {
 	dependsOn(tasks.test) // tests are required to run before generating the report
 }
 
-tasks.withType<KotlinCompile> { kotlinOptions.jvmTarget = "17" }
-
-java {
-	withSourcesJar()
-	withJavadocJar()
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
+    }
 }
 
 publishing {
