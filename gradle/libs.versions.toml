@@ -1,6 +1,6 @@
 [versions]
 clikt = "5.0.3"
-junit = "5.12.1"
+junit = "5.12.2"
 kotlin = "2.1.20"
 kotlin-logging-jvm = "7.0.6"
 ktfmt = "0.21.0"
