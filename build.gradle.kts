@@ -23,6 +23,9 @@ dependencies {
 	testImplementation(libs.junit.params)
 	testImplementation(libs.slf4j)
 	testImplementation("org.lmdbjava:lmdbjava:0.9.0")
+	// Kotest property-based testing
+	testImplementation("io.kotest:kotest-property-jvm:5.9.1")
+	testImplementation("io.kotest:kotest-runner-junit5:5.9.1")
 }
 
 tasks.test {
