@@ -22,7 +22,7 @@ dependencies {
 	testImplementation(libs.kotlin.test)
 	testImplementation(libs.junit.params)
 	testImplementation(libs.slf4j)
-	testImplementation("org.lmdbjava:lmdbjava:0.9.0")
+	testImplementation("org.lmdbjava:lmdbjava:0.9.3")
 }
 
 tasks.test {
