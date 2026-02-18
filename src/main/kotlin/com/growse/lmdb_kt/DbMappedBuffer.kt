@@ -14,6 +14,15 @@ private val logger = KotlinLogging.logger {}
  * onto the underlying buffer.
  */
 data class DbMappedBuffer(private val buffer: ByteBuffer, internal val pageSize: UInt) {
+  private fun checkedPosition(position: Long): Int {
+    require(position in 0..Int.MAX_VALUE.toLong()) {
+      "Buffer position out of range for Int indexing: $position"
+    }
+    return position.toInt()
+  }
+
+  private fun absolutePagePosition(pageNumber: UInt): Long = pageNumber.toLong() * pageSize.toLong()
+
   /**
    * Parses the given page number into the correct structure
    *
@@ -22,7 +31,7 @@ data class DbMappedBuffer(private val buffer: ByteBuffer, internal val pageSize:
    */
   internal fun getPage(number: UInt): Page {
     logger.trace { "Getting page $number" }
-    val pageStart = (number * this.pageSize).toInt()
+    val pageStart = checkedPosition(absolutePagePosition(number))
     buffer.position(pageStart)
     val pageHeader = PageHeader(this, number)
     assert(
@@ -54,7 +63,7 @@ data class DbMappedBuffer(private val buffer: ByteBuffer, internal val pageSize:
       pageNumber: UInt,
       offsetInPage: UInt = 0u,
   ) {
-    ((pageNumber * pageSize) + offsetInPage).toInt().run {
+    checkedPosition(absolutePagePosition(pageNumber) + offsetInPage.toLong()).run {
       logger.trace { "Seek to page $pageNumber offset $offsetInPage (absolute=$this)" }
       buffer.position(this)
     }
@@ -103,7 +112,7 @@ data class DbMappedBuffer(private val buffer: ByteBuffer, internal val pageSize:
       index: Int,
       length: Int,
   ): ByteBuffer {
-    val position = (pageNumber * pageSize).toInt() + index
+    val position = checkedPosition(absolutePagePosition(pageNumber) + index.toLong())
     return buffer.run {
       position(position)
       slice().limit(length)
