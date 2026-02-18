@@ -68,26 +68,32 @@ class Environment(
       "Mapping file $dataFile. Size is ${dataFile.fileSize()}, md5 is ${dataFile.readBytes().digest()}"
     }
     dataFileChannel = FileChannel.open(dataFile)
+    try {
+      val mappedFile =
+          dataFileChannel.map(FileChannel.MapMode.READ_ONLY, 0, dataFile.fileSize()).apply {
+            order(byteOrder)
+          }
 
-    val mappedFile =
-        dataFileChannel.map(FileChannel.MapMode.READ_ONLY, 0, dataFile.fileSize()).apply {
-          order(byteOrder)
-        }
+      val (metadataPointers, detectedPageSize) =
+          if (pageSize != null) {
+            getMetadataPage(mappedFile, listOf(pageSize))
+          } else {
+            getMetadataPage(mappedFile)
+          }
 
-    val (metadataPointers, detectedPageSize) =
-        if (pageSize != null) {
-          getMetadataPage(mappedFile, listOf(pageSize))
-        } else {
-          getMetadataPage(mappedFile)
-        }
+      assert(dataFile.fileSize() % detectedPageSize.toInt() == 0L) {
+        "Data file is not a multiple of the detected page size of $pageSize"
+      }
 
-    assert(dataFile.fileSize() % detectedPageSize.toInt() == 0L) {
-      "Data file is not a multiple of the detected page size of $pageSize"
+      metadataPages = metadataPointers
+      logger.trace { "Setting up mapped buffer on mainDb" }
+      mainDbMappedDbMappedBuffer = DbMappedBuffer(mappedFile, detectedPageSize)
+    } catch (t: Throwable) {
+      if (dataFileChannel.isOpen) {
+        dataFileChannel.close()
+      }
+      throw t
     }
-
-    metadataPages = metadataPointers
-    logger.trace { "Setting up mapped buffer on mainDb" }
-    mainDbMappedDbMappedBuffer = DbMappedBuffer(mappedFile, detectedPageSize)
   }
 
   fun latestMetadataPage(): MetaDataPage64 {
