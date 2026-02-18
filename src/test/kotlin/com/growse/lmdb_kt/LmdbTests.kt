@@ -23,8 +23,8 @@ class LmdbTests {
   }
 
   @Test
-  fun `given a path that is not a dir, when trying to create an lmdb database, then an assertion error is thrown`() {
-    assertThrows<AssertionError> { Environment(Paths.get("boop")) }
+  fun `given a path that is not a dir, when trying to create an lmdb database, then an exception is thrown`() {
+    assertThrows<IllegalArgumentException> { Environment(Paths.get("boop")) }
   }
 
   @ParameterizedTest(name = "{index}: {0}")

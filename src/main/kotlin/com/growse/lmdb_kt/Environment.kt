@@ -53,15 +53,15 @@ class Environment(
    */
   init {
     val dirPath = Paths.get(lmdbPath)
-    assert(readOnly) { "Writes are not currently implemented" }
-    assert(!locking) { "Locking is not currently implemented" }
-    assert(dirPath.isDirectory()) { "Supplied path is not a directory" }
+    require(readOnly) { "Writes are not currently implemented" }
+    require(!locking) { "Locking is not currently implemented" }
+    require(dirPath.isDirectory()) { "Supplied path is not a directory" }
 
     dataFile = dirPath.resolve(DATA_FILENAME)
     lockFile = dirPath.resolve(LOCK_FILENAME)
-    assert(dataFile.isRegularFile()) { "Supplied path does not contain a data file" }
+    require(dataFile.isRegularFile()) { "Supplied path does not contain a data file" }
     if (locking) {
-      assert(lockFile.isRegularFile()) { "Supplied path does not contain a lock file" }
+      require(lockFile.isRegularFile()) { "Supplied path does not contain a lock file" }
     }
 
     logger.trace {
@@ -81,7 +81,7 @@ class Environment(
           getMetadataPage(mappedFile)
         }
 
-    assert(dataFile.fileSize() % detectedPageSize.toInt() == 0L) {
+    check(dataFile.fileSize() % detectedPageSize.toInt() == 0L) {
       "Data file is not a multiple of the detected page size of $pageSize"
     }
 
