@@ -4,6 +4,8 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.stream.Stream
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -22,6 +24,18 @@ class DbMappedBufferTests {
             )
             .flags(DB.Flags::class.java, 2u)
     assertEquals(expected, parsedFlags.toSet())
+  }
+
+  @Test
+  fun `given a large page number, when seeking, then an exception is thrown before position overflow`() {
+    val buffer = DbMappedBuffer(ByteBuffer.allocate(1), 16384u)
+    assertFailsWith<IllegalArgumentException> { buffer.seek(UInt.MAX_VALUE) }
+  }
+
+  @Test
+  fun `given a large page number, when slicing, then an exception is thrown before position overflow`() {
+    val buffer = DbMappedBuffer(ByteBuffer.allocate(1), 16384u)
+    assertFailsWith<IllegalArgumentException> { buffer.slice(UInt.MAX_VALUE, 0, 1) }
   }
 
   companion object {
