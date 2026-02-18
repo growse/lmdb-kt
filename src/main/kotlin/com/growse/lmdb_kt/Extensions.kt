@@ -20,5 +20,10 @@ internal fun ByteArray.compareWith(byteArray: ByteArray): Int {
   }
   if (this.isEmpty()) return -1
   if (byteArray.isEmpty()) return 1
-  return if (this.zip(byteArray).first { it.first != it.second }.run { first > second }) 1 else -1
+  val firstDifference = this.zip(byteArray).firstOrNull { it.first != it.second }
+  return when {
+    firstDifference != null -> if (firstDifference.first > firstDifference.second) 1 else -1
+    this.size > byteArray.size -> 1
+    else -> -1
+  }
 }

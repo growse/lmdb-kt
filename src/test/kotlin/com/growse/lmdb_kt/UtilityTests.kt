@@ -23,4 +23,14 @@ class UtilityTests {
   fun `given two bytearrays that are the same, when comparing the smaller with the larger, then the result is 1`() {
     assertEquals(1, b1.compareWith(b2))
   }
+
+  @Test
+  fun `given two bytearrays where one is a prefix, when comparing shorter with longer, then the result is -1`() {
+    assertEquals(-1, byteArrayOf(1, 2, 3).compareWith(byteArrayOf(1, 2, 3, 4)))
+  }
+
+  @Test
+  fun `given two bytearrays where one is a prefix, when comparing longer with shorter, then the result is 1`() {
+    assertEquals(1, byteArrayOf(1, 2, 3, 4).compareWith(byteArrayOf(1, 2, 3)))
+  }
 }
