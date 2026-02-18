@@ -204,6 +204,28 @@ class LmdbTests {
   }
 
   @Test
+  fun `given an environment, when getting a key lower than all branch keys, then a failure result is returned`() {
+    Environment(
+            Paths.get(
+                javaClass
+                    .getResource("/databases/little-endian/4KB-page-size/100-random-values")!!
+                    .toURI(),
+            ),
+            readOnly = true,
+            locking = false,
+            byteOrder = ByteOrder.LITTLE_ENDIAN,
+            pageSize = 4096.toUInt(),
+        )
+        .use { env ->
+          env.beginTransaction().use { tx ->
+            val value = tx.get(byteArrayOf())
+            assert(value.isFailure)
+            assert(value.exceptionOrNull() is Page.KeyNotFoundInPage)
+          }
+        }
+  }
+
+  @Test
   fun `given an environment for an invalid database file, when trying to load the environment, then an exception is thrown`() {
     assertThrows<NotAnLMDBDataFile> {
       Environment(
