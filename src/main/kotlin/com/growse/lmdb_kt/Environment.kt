@@ -163,7 +163,8 @@ class Environment(
       } catch (e: Throwable) {
         when (e) {
           is AssertionError,
-          is Page.UnsupportedPageTypeException, -> {
+          is Page.UnsupportedPageTypeException,
+          -> {
             logger.debug { "Page size is not $testPageSize" }
           }
           else -> throw e
