@@ -21,6 +21,7 @@ dependencies {
   testImplementation(libs.junit.params)
   testImplementation(libs.kotest.runner.junit5)
   testImplementation(libs.kotest.datatest)
+  testImplementation(libs.jazzer)
   testImplementation(libs.slf4j)
   testImplementation("org.lmdbjava:lmdbjava:0.9.3")
 }
@@ -48,6 +49,7 @@ tasks.register<Test>("unitTest") {
   filter {
     excludeTestsMatching("com.growse.lmdb_kt.GeneratorTests")
     excludeTestsMatching("com.growse.lmdb_kt.RandomDatabaseRoundtripTests")
+    excludeTestsMatching("com.growse.lmdb_kt.FuzzTests")
   }
 }
 
@@ -61,7 +63,18 @@ tasks.register<Test>("integrationTest") {
   filter {
     includeTestsMatching("com.growse.lmdb_kt.GeneratorTests")
     includeTestsMatching("com.growse.lmdb_kt.RandomDatabaseRoundtripTests")
+    includeTestsMatching("com.growse.lmdb_kt.FuzzTests")
   }
+}
+
+tasks.register<Test>("fuzzTest") {
+  description = "Runs fuzz tests against lmdb-kt. Set JAZZER_FUZZ=1 for coverage-guided fuzzing."
+  group = "verification"
+  testClassesDirs = sourceSets.test.get().output.classesDirs
+  classpath = sourceSets.test.get().runtimeClasspath
+  useJUnitPlatform()
+  jvmArgs = sharedJvmArgs
+  filter { includeTestsMatching("com.growse.lmdb_kt.FuzzTests") }
 }
 
 tasks.jacocoTestReport {

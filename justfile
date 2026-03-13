@@ -17,3 +17,6 @@ test-unit:
 
 test-integration:
     ./gradlew integrationTest
+
+fuzz:
+    JAZZER_FUZZ=1 ./gradlew fuzzTest
