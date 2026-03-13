@@ -5,3 +5,5 @@ default:
 
 build:
     ./gradlew assemble
+fmt:
+    ./gradlew ktfmtFormat
