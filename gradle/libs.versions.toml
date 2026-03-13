@@ -3,7 +3,7 @@ clikt = "5.1.0"
 junit = "6.0.3"
 kotlin = "2.3.10"
 kotlin-logging-jvm = "8.0.01"
-ktfmt = "0.21.0"
+ktfmt = "0.25.0"
 slf4j = "2.0.17"
 test-logger = "4.0.0"
 
