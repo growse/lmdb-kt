@@ -23,16 +23,21 @@ import org.lmdbjava.Env
  * just test-integration
  * ```
  *
- * Run with coverage-guided fuzzing (finds new inputs, runs until crash or interrupted):
+ * Run with coverage-guided fuzzing (runs indefinitely until crash or Ctrl-C):
  * ```
  * just fuzz
+ * ```
+ *
+ * Run for a fixed duration (e.g. 30 minutes):
+ * ```
+ * just fuzz-for 30m
  * ```
  */
 @Tags("integration")
 @Tag("integration")
 @OptIn(ExperimentalPathApi::class)
 class FuzzTests {
-  @FuzzTest(maxDuration = "5m")
+  @FuzzTest
   fun fuzz(data: FuzzedDataProvider) {
     val entryCount = data.consumeInt(1, 100)
 

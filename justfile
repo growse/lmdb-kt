@@ -20,3 +20,7 @@ test-integration:
 
 fuzz:
     JAZZER_FUZZ=1 ./gradlew fuzzTest
+
+# Time-box fuzzing (e.g. just fuzz-for 30m, just fuzz-for 1h)
+fuzz-for duration:
+    timeout {{ duration }} just fuzz || true
