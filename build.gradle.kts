@@ -19,6 +19,8 @@ dependencies {
   implementation(libs.kotlin.logging.jvm)
   testImplementation(libs.kotlin.test)
   testImplementation(libs.junit.params)
+  testImplementation(libs.kotest.runner.junit5)
+  testImplementation(libs.kotest.datatest)
   testImplementation(libs.slf4j)
   testImplementation("org.lmdbjava:lmdbjava:0.9.3")
 }

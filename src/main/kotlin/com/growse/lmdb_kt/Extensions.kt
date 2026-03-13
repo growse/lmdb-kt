@@ -22,7 +22,7 @@ internal fun ByteArray.compareWith(byteArray: ByteArray): Int {
   if (byteArray.isEmpty()) return 1
   val firstDifference = this.zip(byteArray).firstOrNull { it.first != it.second }
   return when {
-    firstDifference != null -> if (firstDifference.first > firstDifference.second) 1 else -1
+    firstDifference != null -> if (firstDifference.first.toUByte() > firstDifference.second.toUByte()) 1 else -1
     this.size > byteArray.size -> 1
     else -> -1
   }

@@ -30,7 +30,7 @@ data class BranchPage(
             logger.trace { "Key get. Looking for ${key.toPrintableString()} on page $number" }
           }
           .let { branchNodes ->
-            branchNodes.lastOrNull { it.copyKeyBytes().compareWith(key) < 0 } ?: branchNodes.first()
+            branchNodes.lastOrNull { it.copyKeyBytes().compareWith(key) <= 0 } ?: branchNodes.first()
           }
           .also {
             logger.trace { "Found it in a branch node. Going to child page: ${it.childPage}" }
