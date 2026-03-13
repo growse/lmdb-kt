@@ -68,13 +68,19 @@ tasks.register<Test>("integrationTest") {
 }
 
 tasks.register<Test>("fuzzTest") {
-  description = "Runs fuzz tests against lmdb-kt. Set JAZZER_FUZZ=1 for coverage-guided fuzzing."
+  description =
+      "Runs fuzz tests. Pass -Pfuzz for coverage-guided fuzzing (just fuzz), otherwise regression mode."
   group = "verification"
   testClassesDirs = sourceSets.test.get().output.classesDirs
   classpath = sourceSets.test.get().runtimeClasspath
   useJUnitPlatform()
   jvmArgs = sharedJvmArgs
   filter { includeTestsMatching("com.growse.lmdb_kt.FuzzTests") }
+  // -Pfuzz injects JAZZER_FUZZ into the forked test JVM, bypassing the Gradle daemon's
+  // cached environment (which would silently ignore JAZZER_FUZZ=1 set in the shell).
+  if (project.hasProperty("fuzz")) {
+    environment("JAZZER_FUZZ", "1")
+  }
 }
 
 tasks.jacocoTestReport {

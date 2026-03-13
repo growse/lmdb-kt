@@ -19,7 +19,7 @@ test-integration:
     ./gradlew integrationTest
 
 fuzz:
-    JAZZER_FUZZ=1 ./gradlew fuzzTest
+    ./gradlew fuzzTest -Pfuzz
 
 # Time-box fuzzing (e.g. just fuzz-for 30m, just fuzz-for 1h)
 fuzz-for duration:

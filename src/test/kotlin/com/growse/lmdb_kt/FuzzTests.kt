@@ -37,7 +37,7 @@ import org.lmdbjava.Env
 @Tag("integration")
 @OptIn(ExperimentalPathApi::class)
 class FuzzTests {
-  @FuzzTest
+  @FuzzTest(maxDuration = "")
   fun fuzz(data: FuzzedDataProvider) {
     val entryCount = data.consumeInt(1, 100)
 
