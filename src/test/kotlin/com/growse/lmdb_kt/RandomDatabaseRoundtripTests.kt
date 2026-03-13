@@ -1,5 +1,6 @@
 package com.growse.lmdb_kt
 
+import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.maps.shouldHaveSize
@@ -23,6 +24,7 @@ import org.lmdbjava.Env
  * Note: lmdbjava creates databases with the OS-default page size (4096 bytes on Linux); page size
  * is auto-detected when opening with lmdb-kt.
  */
+@Tags("integration")
 @OptIn(ExperimentalPathApi::class)
 class RandomDatabaseRoundtripTests :
     FreeSpec({

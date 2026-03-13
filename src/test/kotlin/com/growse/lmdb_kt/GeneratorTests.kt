@@ -12,6 +12,7 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Named.named
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.Arguments.arguments
@@ -21,6 +22,7 @@ import org.lmdbjava.Env
 import org.slf4j.simple.SimpleLogger
 
 /** Creates an LMDB using the native implementation and then attempts to read with ours */
+@Tag("integration")
 class GeneratorTests {
   init {
     System.setProperty(SimpleLogger.DEFAULT_LOG_LEVEL_KEY, "TRACE")

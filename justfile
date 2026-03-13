@@ -5,5 +5,15 @@ default:
 
 build:
     ./gradlew assemble
+
 fmt:
     ./gradlew ktfmtFormat
+
+test:
+    ./gradlew test
+
+test-unit:
+    ./gradlew unitTest
+
+test-integration:
+    ./gradlew integrationTest

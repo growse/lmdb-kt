@@ -25,15 +25,43 @@ dependencies {
   testImplementation("org.lmdbjava:lmdbjava:0.9.3")
 }
 
+val sharedJvmArgs =
+    listOf(
+        "--add-opens",
+        "java.base/java.nio=ALL-UNNAMED",
+        "--add-opens",
+        "java.base/sun.nio.ch=ALL-UNNAMED",
+    )
+
 tasks.test {
   useJUnitPlatform()
-  jvmArgs =
-      listOf(
-          "--add-opens",
-          "java.base/java.nio=ALL-UNNAMED",
-          "--add-opens",
-          "java.base/sun.nio.ch=ALL-UNNAMED",
-      )
+  jvmArgs = sharedJvmArgs
+}
+
+tasks.register<Test>("unitTest") {
+  description = "Runs tests that do not depend on an external LMDB installation."
+  group = "verification"
+  testClassesDirs = sourceSets.test.get().output.classesDirs
+  classpath = sourceSets.test.get().runtimeClasspath
+  useJUnitPlatform()
+  jvmArgs = sharedJvmArgs
+  filter {
+    excludeTestsMatching("com.growse.lmdb_kt.GeneratorTests")
+    excludeTestsMatching("com.growse.lmdb_kt.RandomDatabaseRoundtripTests")
+  }
+}
+
+tasks.register<Test>("integrationTest") {
+  description = "Runs tests that create real LMDB databases via lmdbjava."
+  group = "verification"
+  testClassesDirs = sourceSets.test.get().output.classesDirs
+  classpath = sourceSets.test.get().runtimeClasspath
+  useJUnitPlatform()
+  jvmArgs = sharedJvmArgs
+  filter {
+    includeTestsMatching("com.growse.lmdb_kt.GeneratorTests")
+    includeTestsMatching("com.growse.lmdb_kt.RandomDatabaseRoundtripTests")
+  }
 }
 
 tasks.jacocoTestReport {
