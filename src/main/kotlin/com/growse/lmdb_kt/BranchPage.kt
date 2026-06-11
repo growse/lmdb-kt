@@ -1,6 +1,7 @@
 package com.growse.lmdb_kt
 
 import io.github.oshai.kotlinlogging.KotlinLogging
+import java.nio.ByteBuffer
 
 private val logger = KotlinLogging.logger {}
 
@@ -24,13 +25,13 @@ data class BranchPage(
           .map { BranchNode(buffer, number, it.toUInt()) }
     }
 
-  override fun get(key: ByteArray): Result<ByteArray> =
+  override fun getBuffer(key: ByteArray): Result<ByteBuffer> =
       nodes
           .also {
             logger.trace { "Key get. Looking for ${key.toPrintableString()} on page $number" }
           }
           .let { branchNodes ->
-            branchNodes.lastOrNull { it.copyKeyBytes().compareWith(key) <= 0 }
+            branchNodes.lastOrNull { it.compareKeyTo(key) <= 0 }
                 ?: branchNodes.first()
           }
           .also {
@@ -38,7 +39,14 @@ data class BranchPage(
           }
           .childPage
           .run(buffer::getPage)
-          .get(key)
+          .getBuffer(key)
+
+  override fun scan(): Sequence<Pair<ByteBuffer, ByteBuffer>> = sequence {
+    nodes.forEach { node ->
+      logger.trace { "Branch node points to page at ${node.childPage}" }
+      yieldAll(buffer.getPage(node.childPage).scan())
+    }
+  }
 
   override fun dump(): Map<ByteArrayKey, ByteArray> =
       logger

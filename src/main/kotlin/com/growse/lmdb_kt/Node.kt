@@ -33,11 +33,14 @@ abstract class Node(private val buffer: DbMappedBuffer, pageNumber: UInt, addres
   }
   val key: ByteBuffer = buffer.slice(pageNumber, (addressInPage.toInt() + 8), keySize.toInt())
 
-  fun copyKeyBytes(): ByteArray {
-    return ByteArray(keySize.toInt()).apply(key::get).also {
-      logger.trace { "Pos: ${buffer.position()}" }
-    }
-  }
+  fun keyBuffer(): ByteBuffer = key.readOnlySlice()
+
+  fun copyKeyBytes(): ByteArray =
+      key.copyRemainingBytes().also { logger.trace { "Pos: ${buffer.position()}" } }
+
+  fun keyEquals(bytes: ByteArray): Boolean = key.contentEquals(bytes)
+
+  fun compareKeyTo(bytes: ByteArray): Int = key.compareWith(bytes)
 
   /** Node flags http://www.lmdb.tech/doc/group__mdb__node.html */
   enum class Flags(val idx: Int) {

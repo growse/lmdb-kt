@@ -24,3 +24,7 @@ fuzz:
 # Time-box fuzzing (e.g. just fuzz-for 30m, just fuzz-for 1h)
 fuzz-for duration:
     timeout {{ duration }} just fuzz || true
+
+# Run lmdb-kt vs lmdbjava performance benchmarks
+bench:
+    ./gradlew --rerun-tasks :benchmark:jmh

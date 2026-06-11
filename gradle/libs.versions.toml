@@ -4,6 +4,7 @@ junit = "6.1.0"
 kotlin = "2.4.0"
 kotlin-logging-jvm = "8.0.4"
 jazzer = "0.22.1"
+jmh = "0.7.2"
 kotest = "5.9.1"
 ktfmt = "0.26.0"
 slf4j = "2.0.18"
@@ -22,6 +23,7 @@ jazzer = { group = "com.code-intelligence", name = "jazzer-junit", version.ref =
 slf4j = { group = "org.slf4j", name = "slf4j-simple", version.ref = "slf4j" }
 
 [plugins]
+jmh = { id = "me.champeau.jmh", version.ref = "jmh" }
 test-logger = { id = "com.adarshr.test-logger", version.ref = "test-logger" }
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 ktfmt = { id = "com.ncorti.ktfmt.gradle", version.ref= "ktfmt"}

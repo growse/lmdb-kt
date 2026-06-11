@@ -1,6 +1,7 @@
 package com.growse.lmdb_kt
 
 import io.github.oshai.kotlinlogging.KotlinLogging
+import java.nio.ByteBuffer
 
 private val logger = KotlinLogging.logger {}
 
@@ -76,7 +77,10 @@ data class MetaDataPage64(
     throw AssertionError("Can't dump a metadatapage page directly")
   }
 
-  override fun get(key: ByteArray): Result<ByteArray> =
+  override fun scan(): Sequence<Pair<ByteBuffer, ByteBuffer>> =
+      throw AssertionError("Can't scan a metadata page directly")
+
+  override fun getBuffer(key: ByteArray): Result<ByteBuffer> =
       Result.failure(
           Exception("Can't get a value from a Metadata page"),
       )

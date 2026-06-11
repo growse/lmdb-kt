@@ -31,19 +31,24 @@ data class LeafPage(
           .map { LeafNode(buffer, number, it.toUInt()) }
     }
 
-  override fun get(key: ByteArray): Result<ByteArray> =
+  override fun getBuffer(key: ByteArray): Result<ByteBuffer> =
       nodes
           .also {
             logger.trace { "Key Get. Looking for ${key.toPrintableString()} on LeafPage $number" }
           }
-          .firstOrNull { it.copyKeyBytes().contentEquals(key) }
+          .firstOrNull { it.keyEquals(key) }
           .run {
             if (this == null) {
               Result.failure(Page.KeyNotFoundInPage(key, number))
             } else {
-              Result.success(valueBytes())
+              Result.success(valueBuffer())
             }
           }
+
+  override fun scan(): Sequence<Pair<ByteBuffer, ByteBuffer>> = sequence {
+    logger.trace { "Scan leaf page $number" }
+    nodes.forEach { node -> yield(node.keyBuffer() to node.valueBuffer()) }
+  }
 
   override fun dump(): Map<ByteArrayKey, ByteArray> =
       logger

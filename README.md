@@ -2,6 +2,9 @@
 
 A library to read/write [lmdb](http://www.lmdb.tech/doc/) databases without relying on a native binary.
 
+Point reads support both copying (`Transaction.get`) and zero-copy read-only buffers
+(`Transaction.getBuffer`) over the mapped database file.
+
 ## TODO
 - [X] Stat
 - [X] Dump

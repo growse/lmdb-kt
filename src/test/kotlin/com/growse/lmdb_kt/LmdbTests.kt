@@ -154,6 +154,35 @@ class LmdbTests {
   }
 
   @Test
+  fun `given an environment, when getting an oversize value buffer for a key, then a read-only buffer is returned`() {
+    val key = "KEYimcfsuuqqdufeckfbglgoairkcfhvwsafzwmbpgfbxzhtvlrx"
+    Environment(
+            Paths.get(
+                javaClass
+                    .getResource("/databases/little-endian/4KB-page-size/100-random-values")!!
+                    .toURI(),
+            ),
+            readOnly = true,
+            locking = false,
+            byteOrder = ByteOrder.LITTLE_ENDIAN,
+            pageSize = 4096.toUInt(),
+        )
+        .use { env ->
+          env.beginTransaction().use { tx ->
+            val value = tx.getBuffer(key.toByteArray())
+            assert(value.isSuccess)
+            value.getOrThrow().run {
+              assertTrue(isReadOnly)
+              copyRemainingBytes().run {
+                assertEquals(7209, size)
+                assertEquals("f161ed45d7744c25a2ffd85c828c0543", digest())
+              }
+            }
+          }
+        }
+  }
+
+  @Test
   fun `given an environment, when getting an undersized value for a key, then the value is returned`() {
     val key = "KEYb"
     Environment(
@@ -174,6 +203,35 @@ class LmdbTests {
             value.getOrThrow().run {
               assertEquals(419, size)
               assertEquals("b7506a2d4d442dac673c46d27a20d1f7", digest())
+            }
+          }
+        }
+  }
+
+  @Test
+  fun `given an environment, when getting an undersized value buffer for a key, then a read-only buffer is returned`() {
+    val key = "KEYb"
+    Environment(
+            Paths.get(
+                javaClass
+                    .getResource("/databases/little-endian/4KB-page-size/100-random-values")!!
+                    .toURI(),
+            ),
+            readOnly = true,
+            locking = false,
+            byteOrder = ByteOrder.LITTLE_ENDIAN,
+            pageSize = 4096.toUInt(),
+        )
+        .use { env ->
+          env.beginTransaction().use { tx ->
+            val value = tx.getBuffer(key.toByteArray())
+            assert(value.isSuccess)
+            value.getOrThrow().run {
+              assertTrue(isReadOnly)
+              copyRemainingBytes().run {
+                assertEquals(419, size)
+                assertEquals("b7506a2d4d442dac673c46d27a20d1f7", digest())
+              }
             }
           }
         }
@@ -221,6 +279,60 @@ class LmdbTests {
             val value = tx.get(byteArrayOf())
             assert(value.isFailure)
             assert(value.exceptionOrNull() is Page.KeyNotFoundInPage)
+          }
+        }
+  }
+
+  @Test
+  fun `given an environment, when scanning all entries, then all entries are streamed as read-only buffers`() {
+    Environment(
+            Paths.get(
+                javaClass
+                    .getResource("/databases/little-endian/4KB-page-size/100-random-values")!!
+                    .toURI(),
+            ),
+            readOnly = true,
+            locking = false,
+            byteOrder = ByteOrder.LITTLE_ENDIAN,
+            pageSize = 4096.toUInt(),
+        )
+        .use { env ->
+          env.beginTransaction().use { tx ->
+            val entries = tx.scan().toList()
+            assertEquals(100, entries.size)
+            entries.forEach { (key, value) ->
+              assertTrue(key.isReadOnly)
+              assertTrue(value.isReadOnly)
+              assertTrue(key.remaining() > 0)
+              assertTrue(value.remaining() > 0)
+            }
+          }
+        }
+  }
+
+  @Test
+  fun `given an environment, when scanning and collecting, then the result matches dump`() {
+    Environment(
+            Paths.get(
+                javaClass
+                    .getResource("/databases/little-endian/4KB-page-size/100-random-values")!!
+                    .toURI(),
+            ),
+            readOnly = true,
+            locking = false,
+            byteOrder = ByteOrder.LITTLE_ENDIAN,
+            pageSize = 4096.toUInt(),
+        )
+        .use { env ->
+          env.beginTransaction().use { tx ->
+            val scanned = tx.scan().map { (k, v) -> k.copyRemainingBytes() to v.copyRemainingBytes() }.toList()
+            val dumped = tx.dump()
+            assertEquals(dumped.size, scanned.size)
+            scanned.forEach { (k, v) ->
+              val expected = dumped[k.toByteArrayKey()]
+              assertTrue(expected != null, "Key from scan not found in dump")
+              assertTrue(v.contentEquals(expected))
+            }
           }
         }
   }

@@ -36,20 +36,17 @@ data class LeafNode(
     }
   }
 
-  fun valueBytes(): ByteArray {
-    return when (value) {
-      is Either.Left ->
-          ByteArray(valueSize.toInt()).apply {
-            buffer.seek(pageNumber, addressInPage)
-            (value as Either.Left<ByteBuffer, Long>).left.get(this)
-          }
-      is Either.Right ->
-          (buffer.getPage((value as Either.Right<ByteBuffer, Long>).right.toUInt()).also {
-                assert(it is OverflowPage)
-              } as OverflowPage)
-              .getValue(valueSize)
-    }
-  }
+  fun valueBuffer(): ByteBuffer =
+      when (value) {
+        is Either.Left -> (value as Either.Left<ByteBuffer, Long>).left.readOnlySlice()
+        is Either.Right ->
+            (buffer.getPage((value as Either.Right<ByteBuffer, Long>).right.toUInt()).also {
+                  assert(it is OverflowPage)
+                } as OverflowPage)
+                .getValueBuffer(valueSize)
+      }
+
+  fun valueBytes(): ByteArray = valueBuffer().copyRemainingBytes()
 
   override fun toString(): String {
     return "LeafNode(page=$pageNumber, addressInPage=$addressInPage)"
